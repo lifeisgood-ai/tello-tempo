@@ -11,7 +11,80 @@ from collections import deque
 from djitellopy import Tello
 # from gestures import *
 
+import tellopy
+import time
+import datetime
+import os
+from threading import Thread
+
 import threading
+
+import platform
+PLATFORM=platform.system()
+P_WINDOWS = 'Windows'
+P_LINUX   = 'Linux'
+P_DARWIN  = 'Darwin'
+
+
+import numpy as np
+import math
+
+
+ON_TELLO = False
+
+if PLATFORM == P_WINDOWS:
+    from ctypes import cast, POINTER
+    from comtypes import CLSCTX_ALL
+    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+from djitellopy import Tello
+import mediapipe as mp
+
+from subprocess import call
+# call(["amixer", "-D", "pulse", "sset", "Master", "0%"])
+
+
+class handDetector():
+    def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
+        self.mode = mode
+        self.maxHands = maxHands
+        self.detectionCon = detectionCon
+        self.trackCon = trackCon
+ 
+        self.mpHands = mp.solutions.hands
+        #self.hands = self.mpHands.Hands(self.mode, self.maxHands,
+                                        #self.detectionCon, self.trackCon)
+        self.hands = self.mpHands.Hands()
+        
+        self.mpDraw = mp.solutions.drawing_utils
+ 
+    def findHands(self, img, draw=True):
+        imgRGB = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+        self.results = self.hands.process(imgRGB)
+        # print(results.multi_hand_landmarks)
+ 
+        if self.results.multi_hand_landmarks:
+            for handLms in self.results.multi_hand_landmarks:
+                if draw:
+                    self.mpDraw.draw_landmarks(img, handLms,
+                                               self.mpHands.HAND_CONNECTIONS)
+        return img
+    
+    def findPosition(self, img, handNo=0, draw=True):
+ 
+        lmList = []
+        if self.results.multi_hand_landmarks:
+            myHand = self.results.multi_hand_landmarks[handNo]
+            for id, lm in enumerate(myHand.landmark):
+                # print(id, lm)
+                h, w, c = img.shape
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                print(id, cx, cy)
+                lmList.append([id, cx, cy])
+                if draw:
+                    cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
+        return lmList
+                    
 
 class CvFpsCalc(object):
     def __init__(self, buffer_len=1):
@@ -76,6 +149,110 @@ def tello_battery(tello):
         battery_status = tello.get_battery()[:-2]
     except:
         battery_status = -1
+
+def hand_detect():
+    ### PARAMETRES DE LA CAMERA
+    width= 640
+    height= 480
+
+    ########### CONNEXION A TELLO ET ACTIVATION DE LA CAMERA 
+    if ON_TELLO:
+        tello =  Tello()
+        tello.connect()
+        tello.streamon()
+    else:
+        cam = cv.VideoCapture(0)
+
+     
+    #### initialisation du temps de départ et de fin
+    pTime = 0
+    cTime = 0
+
+    # INSTANTIATION DE L'objet DETECTEUR DE MAINS
+    detector= handDetector(detectionCon= 0.7)
+
+    if PLATFORM == P_WINDOWS:
+        #ACCES AU VOLUME DE L'ORDINATEUR
+        devices = AudioUtilities.GetSpeakers()
+        interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+        volume = cast(interface, POINTER(IAudioEndpointVolume))
+        # volume.GetMute()
+        # volume.GetMasterVolumeLevel()
+
+        # Récupération du volume minimum et maximum
+        volRange = volume.GetVolumeRange() 
+        minVol = volRange[0]
+        maxVol = volRange[1]
+    else:
+        minVol = 0
+        maxVol = 100
+    volBar = 400
+    volPer = 0
+    vol = 0
+
+    while True:  # BOUCLE INFINIE
+        
+        # CApture de l'image en temps réel
+        if ON_TELLO:
+            frame_read = tello.get_frame_read()
+            my_frame= frame_read.frame
+        else:
+            result, my_frame = cam.read()
+
+        img = cv.resize(my_frame,(width, height))
+        
+        # Detection de la main et des 21 features avec les positions en X et Y de chaque feature
+        img= detector.findHands(img)
+        lmList=  detector.findPosition(img, draw=  False)
+      
+        
+        
+        if len(lmList) != 0:
+            # print(lmList[4], lmList[8])
+            x1, y1 = lmList[4][1], lmList[4][2] # Coordonnées X et Y du feature 4
+            x2, y2 = lmList[8][1], lmList[8][2] # Coordonnées X et  Y du feature 8 
+            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2 # Coordonnées du milieu entre 4 et 8 
+            
+            
+            cv.circle(img, (x1, y1), 15, (255, 0, 255), cv.FILLED)
+            cv.circle(img, (x2, y2), 15, (255, 0, 255), cv.FILLED)
+            cv.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
+            cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
+            
+            length = math.hypot(x2 - x1, y2 - y1) # Calcul de la distance entre les doigts
+            
+            # Corrélation entre le volume et la distance entre les doigts
+            vol = np.interp(length, [50, 300], [minVol, maxVol])
+            volBar = np.interp(length, [50, 300], [400, 150])
+            volPer = np.interp(length, [50, 300], [0, 100])
+            print(int(length), vol)
+            if PLATFORM == P_WINDOWS:
+                volume.SetMasterVolumeLevel(vol, None)
+            else:
+                call(["amixer", "-D", "pulse", "sset", "Master", f"{vol}%"])
+
+            # Passage de la couleur en vert lorsque la distannce est minime
+            if length < 50:
+                cv.circle(img, (cx, cy), 15, (0, 255, 0), cv.FILLED)
+     
+        cv.rectangle(img, (50, 150), (85, 400), (255, 0, 0), 3)
+        cv.rectangle(img, (50, int(volBar)), (85, 400), (255, 0, 0), cv.FILLED)
+        cv.putText(img, f'{int(volPer)} %', (40, 450), cv.FONT_HERSHEY_COMPLEX,
+                    1, (255, 0, 0), 3)
+     
+        # Calcul de la fréquence de rafraichissement de l'image
+        cTime = time.time()
+        fps = 1 / (cTime - pTime)
+        pTime = cTime
+
+            
+        # Affichage de la fréquence de rafraichissement
+        cv.putText(img, str(int(fps)), (40, 50), cv.FONT_HERSHEY_PLAIN, 3,
+                        (255, 0, 255), 3)
+
+        cv.imshow("Image", img)
+        cv.waitKey(1)
 
 def main():
     # init global vars
@@ -239,4 +416,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    hand_detect()
