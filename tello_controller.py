@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import configargparse
 
 import cv2 as cv
@@ -17,6 +18,9 @@ import datetime
 import os
 from threading import Thread
 
+from tello_thread import TelloThread
+import librosa 
+
 import threading
 
 import platform
@@ -30,7 +34,7 @@ import numpy as np
 import math
 
 
-ON_TELLO = False
+ON_TELLO = True
 
 if PLATFORM == P_WINDOWS:
     from ctypes import cast, POINTER
@@ -42,7 +46,7 @@ import mediapipe as mp
 
 from subprocess import call
 # call(["amixer", "-D", "pulse", "sset", "Master", "0%"])
-
+battery_status=-1
 
 class handDetector():
     def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
@@ -149,6 +153,7 @@ def tello_battery(tello):
         battery_status = tello.get_battery()[:-2]
     except:
         battery_status = -1
+        return
 
 def hand_detect():
     ### PARAMETRES DE LA CAMERA
@@ -186,7 +191,7 @@ def hand_detect():
         maxVol = volRange[1]
     else:
         minVol = 0
-        maxVol = 100
+        maxVol = 200
     volBar = 400
     volPer = 0
     vol = 0
@@ -254,12 +259,16 @@ def hand_detect():
         cv.imshow("Image", img)
         cv.waitKey(1)
 
+
+
 def main():
     # init global vars
     global gesture_buffer
     global gesture_id
     global battery_status
+    battery_status = 0
 
+    print("********************STARTNING**************************")
     # Argument parsing
     args = get_args()
     KEYBOARD_CONTROL = args.is_keyboard
@@ -270,8 +279,8 @@ def main():
     tello = Tello()
     print("connect")
     tello.connect()
-    tello.streamon()
 
+    tello.streamon()
     cap = tello.get_frame_read()
 
     # Init Tello Controllers
@@ -296,6 +305,20 @@ def main():
     # c up/down
     # d yaw
 
+    
+    print(f"Battery level: {tello_battery(tello)}")
+
+    # # Start control threads
+
+    # threading.Thread(target=tello_control, args=(key, keyboard_controller, gesture_controller,)).start()
+
+    thr_battery = TelloThread(target=tello_battery, args=(tello,))
+    # thr_hand_detect = TelloThread(target=hand_detect, args=(tello,))
+    thr_get_beat = TelloThread(target=beat)
+    
+
+    thr_bat.start()
+    thr_beat.start()
 
 
     # FPS Measurement
@@ -303,7 +326,6 @@ def main():
 
     mode = 0
     number = -1
-    battery_status = -1
 
     # tello.move_down(20)
     print("in loop")
@@ -347,29 +369,34 @@ def main():
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
-            tello.send_rc_control(40, 0, 0, 0)  # left moving
+            tello.send_rc_control(-40, 0, 0, 0)  # left moving
         elif key == ord('r'):
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
-            tello.send_rc_control(-40, 0, 0, 0)  # right moving
+            tello.send_rc_control(40, 0, 0, 0)  # right moving
 
         elif key == ord('u'):
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
-            tello.send_rc_control(0, 0, 10, 0)  # up moving
+            tello.send_rc_control(0, 0, 100, 0)  # up moving
         elif key == ord('d'):
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
-            tello.send_rc_control(0, 0, -10, 0)  # down moving
+            tello.send_rc_control(0, 0, -100, 0)  # down moving
         elif key == ord('g'):
             KEYBOARD_CONTROL = False
         elif key == ord('n'):
             mode = 1
             WRITE_CONTROL = True
             KEYBOARD_CONTROL = True
+        elif key == ord('k'):
+            mode = 0
+            KEYBOARD_CONTROL = True
+            WRITE_CONTROL = False
+            tello_battery(tello)
 
         if WRITE_CONTROL:
             number = -1
@@ -396,16 +423,14 @@ def main():
 
         # # Start control thread
         # threading.Thread(target=tello_control, args=(key, keyboard_controller, gesture_controller,)).start()
-        threading.Thread(target=tello_battery, args=(tello,)).start()
+        # threading.Thread(target=tello_battery, args=(tello,)).start()
 
         # debug_image = gesture_detector.draw_info(debug_image, fps, mode, number)
 
         # Battery status and image rendering
-        cv.putText(image, "Battery: {}".format(battery_status), (5, 600 - 5),
-                   cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(image, "Shape/channels: {}".format(image.shape), (5, 550 - 5),
                    cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
+        cv.putText(image, "Battery: {}".format(battery_status), (40, 50), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 3)
         cv.imshow('Tello Gesture Recognition', image)
 
     tello.streamoff()
@@ -415,6 +440,11 @@ def main():
     cv.destroyAllWindows()
 
 
+from tello_sound import TelloBeat
+
 if __name__ == '__main__':
+    tbeat = TelloBeat()
+    thr_beat = TelloThread(target=tbeat.bip)
+    beat()
     # main()
-    hand_detect()
+    # hand_detect()
