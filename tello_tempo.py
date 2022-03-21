@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import configargparse
-
+# import configargparse
+import os, sys
 import cv2 as cv
 
 # from gestures.tello_gesture_controller import TelloGestureController
@@ -32,9 +32,6 @@ P_DARWIN  = 'Darwin'
 
 import numpy as np
 import math
-
-
-ON_TELLO = False
 
 if PLATFORM == P_WINDOWS:
     from ctypes import cast, POINTER
@@ -109,29 +106,29 @@ class CvFpsCalc(object):
         return fps_rounded
 
 
-def get_args():
-    print('## Reading configuration ##')
-    parser = configargparse.ArgParser(default_config_files=['config.txt'])
+# def get_args():
+#     print('## Reading configuration ##')
+#     parser = configargparse.ArgParser(default_config_files=['config.txt'])
 
-    parser.add('-c', '--my-config', required=False, is_config_file=True, help='config file path')
-    parser.add("--device", type=int)
-    parser.add("--width", help='cap width', type=int)
-    parser.add("--height", help='cap height', type=int)
-    parser.add("--is_keyboard", help='To use Keyboard control by default', type=bool)
-    parser.add('--use_static_image_mode', action='store_true', help='True if running on photos')
-    parser.add("--min_detection_confidence",
-               help='min_detection_confidence',
-               type=float)
-    parser.add("--min_tracking_confidence",
-               help='min_tracking_confidence',
-               type=float)
-    parser.add("--buffer_len",
-               help='Length of gesture buffer',
-               type=int)
+#     parser.add('-c', '--my-config', required=False, is_config_file=True, help='config file path')
+#     parser.add("--device", type=int)
+#     parser.add("--width", help='cap width', type=int)
+#     parser.add("--height", help='cap height', type=int)
+#     parser.add("--is_keyboard", help='To use Keyboard control by default', type=bool)
+#     parser.add('--use_static_image_mode', action='store_true', help='True if running on photos')
+#     parser.add("--min_detection_confidence",
+#                help='min_detection_confidence',
+#                type=float)
+#     parser.add("--min_tracking_confidence",
+#                help='min_tracking_confidence',
+#                type=float)
+#     parser.add("--buffer_len",
+#                help='Length of gesture buffer',
+#                type=int)
 
-    args = parser.parse_args()
+#     args = parser.parse_args()
 
-    return args
+#     return args
 
 
 def select_mode(key, mode):
@@ -273,11 +270,14 @@ def preprocess_image(frame, scale=100):
     return image
 
 def main():
+    ON_TELLO=True
     # init global vars
     global gesture_buffer
     global gesture_id
     global battery_status
     battery_status = 0
+    beat_coords = [0, 0, 60, 0]
+
     ### PARAMETRES DE LA CAMERA
     width= 640
     height= 480
@@ -293,8 +293,8 @@ def main():
 
     print("********************STARTNING**************************")
     # Argument parsing
-    args = get_args()
-    KEYBOARD_CONTROL = args.is_keyboard
+    # args = get_args()
+    KEYBOARD_CONTROL = 1 #args.is_keyboard
     WRITE_CONTROL = False
     in_flight = False
 
@@ -385,7 +385,7 @@ def main():
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
             tello.send_rc_control(0, 0, 0, 0)  # Stop moving
-        elif key == ord('g'):
+        elif key == ord('f'):
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
@@ -432,12 +432,12 @@ def main():
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
-            tbit.bip()
-            beat_coords = [0, 0, 60, 0]
-            c = [beat_coords[i]*-1 for i in coords]
-            coords = c.copy()
-            tello.send_rc_control(tuple(coords))  
-                    
+            tbeat.bip()
+            c = [beat_coords[i]*-1 for i in range(len(beat_coords))]
+            beat_coords = c.copy()
+            tello.send_rc_control(beat_coords[0],beat_coords[1],beat_coords[2],beat_coords[3], )  
+            print(beat_coords)
+
         if WRITE_CONTROL:
             number = -1
             if 48 <= key <= 57:  # 0 ~ 9
@@ -486,6 +486,11 @@ from tello_sound import TelloBeat
 
 if __name__ == '__main__':
     
+    if len( sys.argv ) == 2:
+        if sys.argv[1] in [0,1]:
+            ON_TELLO = str(sys.argv[1])
+        
+
     # beat()
     main()
     # hand_detect()
