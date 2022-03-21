@@ -34,7 +34,7 @@ import numpy as np
 import math
 
 
-ON_TELLO = True
+ON_TELLO = False
 
 if PLATFORM == P_WINDOWS:
     from ctypes import cast, POINTER
@@ -150,10 +150,10 @@ def select_mode(key, mode):
 def tello_battery(tello):
     global battery_status
     try:
-        battery_status = tello.get_battery()[:-2]
+        battery_status = tello.get_battery()
     except:
         battery_status = -1
-        return
+    return
 
 def hand_detect():
     ### PARAMETRES DE LA CAMERA
@@ -259,7 +259,18 @@ def hand_detect():
         cv.imshow("Image", img)
         cv.waitKey(1)
 
+def preprocess_image(frame, scale=100):
+    # image = cv.resize(my_frame,(width, height))
+    image = frame
+    image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    image = cv.flip(image, 1)
+    scale_percent = scale # percent of original size
+    width = int(image.shape[1] * scale_percent / 100)
+    height = int(image.shape[0] * scale_percent / 100)
+    dim = (width, height)
 
+    image = cv.resize(image, dim, interpolation = cv.INTER_AREA)
+    return image
 
 def main():
     # init global vars
@@ -267,6 +278,18 @@ def main():
     global gesture_id
     global battery_status
     battery_status = 0
+    ### PARAMETRES DE LA CAMERA
+    width= 640
+    height= 480
+
+    if ON_TELLO:
+        tello =  Tello()
+        tello.connect()
+        tello.streamon()
+    else:
+        cam = cv.VideoCapture(0)
+
+
 
     print("********************STARTNING**************************")
     # Argument parsing
@@ -274,14 +297,6 @@ def main():
     KEYBOARD_CONTROL = args.is_keyboard
     WRITE_CONTROL = False
     in_flight = False
-
-    # Camera preparation
-    tello = Tello()
-    print("connect")
-    tello.connect()
-
-    tello.streamon()
-    cap = tello.get_frame_read()
 
     # Init Tello Controllers
     # gesture_controller = TelloGestureController(tello)
@@ -306,20 +321,26 @@ def main():
     # d yaw
 
     
-    print(f"Battery level: {tello_battery(tello)}")
+    if ON_TELLO:
+        print(f"Battery level: {tello_battery(tello)}")
 
-    # # Start control threads
+        #### Declare control threads ####
+        thr_battery = TelloThread(target=tello_battery, args=(tello,))
 
-    # threading.Thread(target=tello_control, args=(key, keyboard_controller, gesture_controller,)).start()
+        tbeat = TelloBeat()
+        thr_beat = TelloThread(target=tbeat)    
+        # thr_hand_detect = TelloThread(target=hand_detect, args=(tello,))
+        # thr_control = TelloThread(target=tello_control, args=(key, keyboard_controller, gesture_controller,))
 
-    thr_battery = TelloThread(target=tello_battery, args=(tello,))
-    # thr_hand_detect = TelloThread(target=hand_detect, args=(tello,))
-    thr_get_beat = TelloThread(target=beat)
-    
-
-    thr_bat.start()
-    thr_beat.start()
-
+        #### Start control threads ####
+        thr_battery.start()
+        thr_beat.start()
+        ### do not forget to kill and join at the end.
+        # t1.kill()
+        # t1.join()
+    else:
+        tbeat = TelloBeat()
+        # thr_beat = TelloThread(target=tbeat)
 
     # FPS Measurement
     cv_fps_calc = CvFpsCalc(buffer_len=10)
@@ -330,6 +351,15 @@ def main():
     # tello.move_down(20)
     print("in loop")
     while True:
+        # CApture de l'image en temps réel
+        if ON_TELLO:
+            frame_read = tello.get_frame_read()
+            my_frame= frame_read.frame
+        else:
+            result, my_frame = cam.read()
+
+        image = preprocess_image(my_frame)
+        
         fps = cv_fps_calc.get()
 
         # Process Key (ESC: end)
@@ -396,22 +426,24 @@ def main():
             mode = 0
             KEYBOARD_CONTROL = True
             WRITE_CONTROL = False
-            tello_battery(tello)
-
+            if ON_TELLO:
+                print(tello_battery(tello))
+        elif key == ord('t'):
+            mode = 0
+            KEYBOARD_CONTROL = True
+            WRITE_CONTROL = False
+            tbit.bip()
+            beat_coords = [0, 0, 60, 0]
+            c = [beat_coords[i]*-1 for i in coords]
+            coords = c.copy()
+            tello.send_rc_control(tuple(coords))  
+                    
         if WRITE_CONTROL:
             number = -1
             if 48 <= key <= 57:  # 0 ~ 9
                 number = key - 48
 
-        # Camera capture
-        image = cap.frame
-        image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        scale_percent = 60 # percent of original size
-        width = int(image.shape[1] * scale_percent / 100)
-        height = int(image.shape[0] * scale_percent / 100)
-        dim = (width, height)
-
-        image = cv.resize(image, dim, interpolation = cv.INTER_AREA)
+   
          
         # print('Resized Dimensions : ',resized.shape)
          
@@ -433,18 +465,27 @@ def main():
         cv.putText(image, "Battery: {}".format(battery_status), (40, 50), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 3)
         cv.imshow('Tello Gesture Recognition', image)
 
-    tello.streamoff()
+    if ON_TELLO:
+        tello.streamoff()
 
-    tello.land()
-    tello.end()
+        tello.land()
+        tello.end()
+
+
+        thr_battery.kill()
+        thr_battery.join()
+
+        thr_beat.kill()
+        thr_beat.join()
+
+
     cv.destroyAllWindows()
 
 
 from tello_sound import TelloBeat
 
 if __name__ == '__main__':
-    tbeat = TelloBeat()
-    thr_beat = TelloThread(target=tbeat.bip)
-    beat()
-    # main()
+    
+    # beat()
+    main()
     # hand_detect()
