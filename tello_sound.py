@@ -3,9 +3,11 @@
 
 import numpy as np
 import sounddevice as sd
+import playsound
+
 import time
 
-class TelloBeat():
+class TelloSound():
 	def __init__(self):
 		# Samples per second
 		self.sps = 44100
@@ -17,12 +19,16 @@ class TelloBeat():
 		self.duration_s = 0.1
 
 		# Attenuation so the sound is reasonable
-		self.atten = 3
+		self.atten = 0.3
 
 		# NumpPy magic to calculate the waveform
 		self.each_sample_number = np.arange(self.duration_s * self.sps)
 		self.waveform = np.sin(2 * np.pi * self.each_sample_number * self.freq_hz / self.sps)
 		self.waveform_quiet = self.waveform * self.atten
+
+	def play_music(self, name="default"):
+		playsound.playsound('audio/daddys_car.mp3')
+
 
 	def bip(self):
 		# Play the waveform out the speakers
@@ -30,6 +36,9 @@ class TelloBeat():
 		time.sleep(self.duration_s)
 		sd.stop()
 
+if __name__ == '__main__':
+	tb = TelloSound()
+	tb.bip()
 # from pydub.playback import play
 # from pydub import AudioSegment
 
