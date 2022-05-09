@@ -25,12 +25,22 @@ from subprocess import call
 import cv2 as cv
 from pynput import keyboard
 
+def catch_interrupting():
+    print('Interrupted')
+    try:
+        sys.exit(0)
+    except SystemExit:
+        os._exit(0)
 
 def main(status):
     tello_handler = TelloHandler(status)
     tello_handler.init_drone()
-    tello_handler.capture()
-    tello_handler.close_drone()
+    try:
+        tello_handler.capture()
+        tello_handler.stop_drone()
+    except KeyboardInterrupt:
+        tello_handler.stop_drone()
+        catch_interrupting()
 
 class TelloHandler(object):
     """
@@ -183,8 +193,9 @@ class TelloHandler(object):
     def stop_drone(self):
         # End of processing
         if self.on_tello:
-            self.drone.land()
-            self.drone.quit()
+            if self.drone.is_flying:
+                self.drone.land()
+            self.drone.stop()
 
     # Keuborard Handling
     def on_press(self, keyname):
