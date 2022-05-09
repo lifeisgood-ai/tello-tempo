@@ -5,7 +5,7 @@
 import os, sys, time
 
 import platform
-import tellopy
+import djitellopy
 from  tello_sound import TelloSound
 from tello_thread import TelloThread
 from tello_hand_detector import HandDetector
@@ -50,7 +50,7 @@ class TelloHandler(object):
         self.keydown = False
         self.date_fmt = '%Y-%m-%d_%H%M%S'
         self.speed = 50
-        self.drone = tellopy.Tello()
+        self.drone = djitellopy.Tello()
         self.init_drone()
         self.init_controls()
 
@@ -82,6 +82,31 @@ class TelloHandler(object):
         self.tello_thread = TelloThread()
         self.hand_detector = HandDetector()
 
+    def handle_state_change(self, state):
+        if self.state == state:
+            pass
+        else:
+            if self.state == 1:
+                # start music/dance
+                pass
+            elif self.state == 2:
+                # stop music/dance
+                pass
+            elif self.state == 3:
+                # change music/dance
+                pass
+            elif self.state == 4:
+                #
+                pass
+            elif self.state == 5:
+                # takeoff - thumb up
+                pass
+            elif self.state == 100:
+                # change volume sound
+                pass
+            else:
+                pass
+
 
     # Image handling
     def capture(self):
@@ -107,7 +132,10 @@ class TelloHandler(object):
             image = cv.resize(my_frame, (self.img_width, self.img_height))
             image = cv.flip(image, 1)
 
-            image = self.hand_detector.process_volume(image)
+            image, state = self.hand_detector.process_volume(image)
+            image, state = self.hand_detector.process_finger_counter(image)
+
+            self.handle_state_change(state)
 
             # Process Key (ESC: end)
             key = cv.waitKey(1) & 0xff

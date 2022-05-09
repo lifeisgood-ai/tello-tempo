@@ -32,6 +32,11 @@ class HandDetector():
         self.mpDraw = mp.solutions.drawing_utils
         self.init_sound_parameters()
 
+        # self.state [0..]
+        # 100 reglage volume
+        # 1 doigt 1 ...
+        self.hand_state = 0
+
     def init_sound_parameters(self):
         if PLATFORM == P_WINDOWS:
             # ACCES AU VOLUME DE L'ORDINATEUR
@@ -93,27 +98,30 @@ class HandDetector():
             x1, y1 = lmList[4][1], lmList[4][2]  # Coordonnées X et Y du feature 4
             x2, y2 = lmList[8][1], lmList[8][2]  # Coordonnées X et  Y du feature 8
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # Coordonnées du milieu entre 4 et 8
+            # compute real angle
+            angle= 40
+            if angle < 30:
+                self.hand_state=100
+                cv.circle(img, (x1, y1), 15, (255, 0, 255), cv.FILLED)
+                cv.circle(img, (x2, y2), 15, (255, 0, 255), cv.FILLED)
+                cv.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
+                cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
 
-            cv.circle(img, (x1, y1), 15, (255, 0, 255), cv.FILLED)
-            cv.circle(img, (x2, y2), 15, (255, 0, 255), cv.FILLED)
-            cv.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-            cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
+                length = math.hypot(x2 - x1, y2 - y1)  # Calcul de la distance entre les doigts
 
-            length = math.hypot(x2 - x1, y2 - y1)  # Calcul de la distance entre les doigts
+                # Corrélation entre le volume et la distance entre les doigts
+                self.vol = np.interp(length, [50, 300], [self.minVol, self.maxVol])
+                self.volBar = np.interp(length, [50, 300], [400, 150])
+                self.volPer = np.interp(length, [50, 300], [0, 100])
+                print(int(length), self.vol)
+                if PLATFORM == P_WINDOWS:
+                    self.volume.SetMasterVolumeLevel(self.vol, None)
+                else:
+                    call(["amixer", "-D", "pulse", "sset", "Master", f"{self.vol}%"])
 
-            # Corrélation entre le volume et la distance entre les doigts
-            self.vol = np.interp(length, [50, 300], [self.minVol, self.maxVol])
-            self.volBar = np.interp(length, [50, 300], [400, 150])
-            self.volPer = np.interp(length, [50, 300], [0, 100])
-            print(int(length), self.vol)
-            if PLATFORM == P_WINDOWS:
-                self.volume.SetMasterVolumeLevel(self.vol, None)
-            else:
-                call(["amixer", "-D", "pulse", "sset", "Master", f"{self.vol}%"])
-
-            # Passage de la couleur en vert lorsque la distannce est minime
-            if length < 50:
-                cv.circle(img, (cx, cy), 15, (0, 255, 0), cv.FILLED)
+                # Passage de la couleur en vert lorsque la distannce est minime
+                if length < 50:
+                    cv.circle(img, (cx, cy), 15, (0, 255, 0), cv.FILLED)
 
         cv.rectangle(img, (50, 150), (85, 400), (255, 0, 0), 3)
         cv.rectangle(img, (50, int(self.volBar)), (85, 400), (255, 0, 0), cv.FILLED)
