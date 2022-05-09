@@ -82,6 +82,8 @@ class TelloHandler(object):
         self.tello_thread = TelloThread()
         self.hand_detector = HandDetector()
 
+        self.state= 0
+
     def handle_state_change(self, state):
         if self.state == state:
             pass
@@ -133,7 +135,7 @@ class TelloHandler(object):
             image = cv.flip(image, 1)
 
             image, state = self.hand_detector.process_volume(image)
-            image, state = self.hand_detector.process_finger_counter(image)
+            # image, state = self.hand_detector.process_finger_counter(image)
 
             self.handle_state_change(state)
 

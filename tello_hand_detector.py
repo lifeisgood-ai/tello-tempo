@@ -99,7 +99,7 @@ class HandDetector():
             x2, y2 = lmList[8][1], lmList[8][2]  # Coordonnées X et  Y du feature 8
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # Coordonnées du milieu entre 4 et 8
             # compute real angle
-            angle= 40
+            angle= 10
             if angle < 30:
                 self.hand_state=100
                 cv.circle(img, (x1, y1), 15, (255, 0, 255), cv.FILLED)
@@ -133,6 +133,6 @@ class HandDetector():
         fps = 1 / (cTime - pTime)
         pTime = cTime
 
-        return img
+        return img, self.hand_state
 
 
