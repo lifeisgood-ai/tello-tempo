@@ -27,8 +27,6 @@ from pynput import keyboard
 
 
 def main(status):
-
-
     tello_handler = TelloHandler(status)
     tello_handler.init_drone()
     tello_handler.capture()
@@ -176,11 +174,11 @@ class TelloHandler(object):
         if self.on_tello:
             # self.drone.log.set_level(2)
             self.drone.connect()
-            self.drone.start_video()
-            self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA,
-                                 self.flight_data_handler)
-            self.drone.subscribe(self.drone.EVENT_FILE_RECEIVED,
-                                 self.handle_flight_received)
+            self.drone.streamon()
+            # self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA,
+            #                      self.flight_data_handler)
+            # self.drone.subscribe(self.drone.EVENT_FILE_RECEIVED,
+            #                      self.handle_flight_received)
 
     def stop_drone(self):
         # End of processing
@@ -265,7 +263,9 @@ class TelloHandler(object):
 
 if __name__ == '__main__':
 
-    status = 0
+    # status == 0 => webcam
+    # status == 1 => drone
+    status = 1
     # beat()
     main(status)
     # hand_detect()
