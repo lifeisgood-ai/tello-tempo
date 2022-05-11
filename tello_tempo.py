@@ -98,8 +98,6 @@ class TelloHandler(object):
         # make movements
         # sync it with music
 
-
-
     def change_state(self, state):
         if self.state == state:
             pass
@@ -123,6 +121,9 @@ class TelloHandler(object):
                 #
                 pass
             elif self.state == 5:
+                if not self.drone.is_flying:
+                    self.drone.takeoff()
+                self.change_state(1)
                 # takeoff - thumb up
                 pass
             elif self.state == 100:
@@ -185,12 +186,11 @@ class TelloHandler(object):
         image = cv.resize(image, dim, interpolation=cv.INTER_AREA)
         return image
 
-    def interrupt(self, speed):
+    def interrupt_all(self):
         self.INTERRUPT = True
         cv.destroyAllWindows()
         time.sleep(2)
-        sys.exit(0)
-
+        catch_interrupting()
 
     # Drone configuraitoon hanlding
     def init_drone(self):
@@ -234,6 +234,11 @@ class TelloHandler(object):
                     key_handler()
         except AttributeError:
             print('special key {0} pressed'.format(keyname))
+        except Exception as e:
+            """
+            Ugly catch to get any error from drone api
+            """
+            print(e)
 
 
     def on_release(self, keyname):
@@ -261,7 +266,7 @@ class TelloHandler(object):
             'Key.space': 'up',
             'Key.shift': 'down',
             #'Key.shift_r': 'down',
-            'q': 'counter_clockwise',
+            'r': 'counter_clockwise',
             'e': 'clockwise',
             'i': lambda: self.drone.flip_forward(),
             'k': lambda: self.drone.flip_back(),
@@ -272,16 +277,21 @@ class TelloHandler(object):
             'Key.right': lambda: self.drone.clockwise(),
             'Key.up': lambda: self.drone.up(),
             'Key.down': lambda: self.drone.down(),
-            'Key.tab': lambda: self.drone.takeoff(),
-            'Key.backspace': lambda: self.drone.land(),
+
             'p': lambda: print("hello"),
             't': lambda: self.toggle_tracking(),
-            'r': lambda: self.toggle_recording(),
+            'y': lambda: self.toggle_recording(),
             'z': lambda: self.toggle_zoom(),
             'Key.enter': lambda: self.take_picture(),
-            'f': lambda: self.interrupt(),
+
+
+            # validated buttons
             'b': lambda: self.change_state(1),
             'n': lambda: self.change_state(2),
+            'q': lambda: self.interrupt_all(),
+            'Key.tab': lambda: self.drone.takeoff(),
+            'Key.backspace': lambda: self.drone.land(),
+            'v': lambda: self.change_state(5),
         }
         self.key_listener = keyboard.Listener(on_press=self.on_press,
                                               on_release=self.on_release)
@@ -292,7 +302,7 @@ if __name__ == '__main__':
 
     # status == 0 => webcam
     # status == 1 => drone
-    status = 0
+    status = 1
     # beat()
     main(status)
     # hand_detect()
