@@ -4,6 +4,8 @@
 import numpy as np
 import sounddevice as sd
 import playsound
+import librosa
+import vlc
 
 import time
 
@@ -26,9 +28,17 @@ class TelloSound():
 		self.waveform = np.sin(2 * np.pi * self.each_sample_number * self.freq_hz / self.sps)
 		self.waveform_quiet = self.waveform * self.atten
 
-	def play_music(self, name="default"):
-		playsound.playsound('audio/daddys_car.mp3')
+		self.player = vlc.MediaPlayer()
 
+	def play_music(self, name='audio/daddys_car.mp3'):
+		if not self.player.is_playing():
+			self.player = vlc.MediaPlayer(name)
+			self.player.audio_set_volume(100)
+			self.player.play()
+
+	def stop_music(self):
+		if self.player.is_playing():
+			self.player.stop()
 
 	def bip(self):
 		# Play the waveform out the speakers

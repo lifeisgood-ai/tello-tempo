@@ -8,6 +8,7 @@ import platform
 import djitellopy
 from  tello_sound import TelloSound
 from tello_thread import TelloThread
+#pfrom tello_dance import TelloDance
 from tello_hand_detector import HandDetector
 
 PLATFORM = platform.system()
@@ -92,15 +93,28 @@ class TelloHandler(object):
 
         self.state= 0
 
-    def handle_state_change(self, state):
+    def dance(self):
+        self.on_dance = True
+        # make movements
+        # sync it with music
+
+
+
+    def change_state(self, state):
         if self.state == state:
             pass
         else:
+            print("State changed...")
+            self.state = state
             if self.state == 1:
                 # start music/dance
+                print("playing music/dance")
+                self.tello_sound.play_music()
                 pass
             elif self.state == 2:
                 # stop music/dance
+                print("stopping music/dance")
+                self.tello_sound.stop_music()
                 pass
             elif self.state == 3:
                 # change music/dance
@@ -145,7 +159,7 @@ class TelloHandler(object):
             image, state = self.hand_detector.process_volume(image)
             # image, state = self.hand_detector.process_finger_counter(image)
 
-            self.handle_state_change(state)
+            self.change_state(state)
 
             # Process Key (ESC: end)
             key = cv.waitKey(1) & 0xff
@@ -200,23 +214,24 @@ class TelloHandler(object):
     # Keuborard Handling
     def on_press(self, keyname):
         """handler for keyboard listener"""
+        # 'Key.tab': lambda speed: self.drone.takeoff(),
         if self.keydown:
             return
         try:
             self.keydown = True
             keyname = str(keyname).strip('\'')
-            print('+' + keyname)
+            #print('+' + keyname)
             if keyname == 'Key.esc':
                 #self.drone.quit()
                 exit(0)
             if keyname in self.controls:
                 key_handler = self.controls[keyname]
                 if isinstance(key_handler, str):
-                    print("press", key_handler)
+                    #print("press", key_handler)
                     getattr(self.drone, key_handler)(self.speed)
                 else:
-                    print(self.speed)
-                    key_handler(self.speed)
+                    #print("press", key_handler)
+                    key_handler()
         except AttributeError:
             print('special key {0} pressed'.format(keyname))
 
@@ -225,14 +240,15 @@ class TelloHandler(object):
         """Reset on key up from keyboard listener"""
         self.keydown = False
         keyname = str(keyname).strip('\'')
-        print('-' + keyname)
+        #print('-' + keyname)
         if keyname in self.controls:
             key_handler = self.controls[keyname]
-            if isinstance(key_handler, str):
-                print("release ", key_handler)
-                #getattr(self.drone, key_handler)(0)
-            else:
-                key_handler(0)
+            print('... released')
+            #if isinstance(key_handler, str):
+                #print("release ", key_handler)
+            #    getattr(self.drone, key_handler)(0)
+            #else:
+            #    key_handler()
 
 
     def init_controls(self):
@@ -244,39 +260,39 @@ class TelloHandler(object):
             'd': 'right',
             'Key.space': 'up',
             'Key.shift': 'down',
-            'Key.shift_r': 'down',
+            #'Key.shift_r': 'down',
             'q': 'counter_clockwise',
             'e': 'clockwise',
-            'i': lambda speed: self.drone.flip_forward(),
-            'k': lambda speed: self.drone.flip_back(),
-            'j': lambda speed: self.drone.flip_left(),
-            'l': lambda speed: self.drone.flip_right(),
+            'i': lambda: self.drone.flip_forward(),
+            'k': lambda: self.drone.flip_back(),
+            'j': lambda: self.drone.flip_left(),
+            'l': lambda: self.drone.flip_right(),
             # arrow keys for fast turns and altitude adjustments
-            'Key.left': lambda speed: self.drone.counter_clockwise(speed),
-            'Key.right': lambda speed: self.drone.clockwise(speed),
-            'Key.up': lambda speed: self.drone.up(speed),
-            'Key.down': lambda speed: self.drone.down(speed),
-            'Key.tab': lambda speed: self.drone.takeoff(),
-            'Key.backspace': lambda speed: self.drone.land(),
-            'p': lambda speed: self.palm_land(speed),
-            't': lambda speed: self.toggle_tracking(speed),
-            'r': lambda speed: self.toggle_recording(speed),
-            'z': lambda speed: self.toggle_zoom(speed),
-            'Key.enter': lambda speed: self.take_picture(speed),
-            'f': lambda speed: self.interrupt(speed)
+            'Key.left': lambda: self.drone.counter_clockwise(),
+            'Key.right': lambda: self.drone.clockwise(),
+            'Key.up': lambda: self.drone.up(),
+            'Key.down': lambda: self.drone.down(),
+            'Key.tab': lambda: self.drone.takeoff(),
+            'Key.backspace': lambda: self.drone.land(),
+            'p': lambda: print("hello"),
+            't': lambda: self.toggle_tracking(),
+            'r': lambda: self.toggle_recording(),
+            'z': lambda: self.toggle_zoom(),
+            'Key.enter': lambda: self.take_picture(),
+            'f': lambda: self.interrupt(),
+            'b': lambda: self.change_state(1),
+            'n': lambda: self.change_state(2),
         }
         self.key_listener = keyboard.Listener(on_press=self.on_press,
                                               on_release=self.on_release)
         self.key_listener.start()
         # self.key_listener.join()
 
-
-
 if __name__ == '__main__':
 
     # status == 0 => webcam
     # status == 1 => drone
-    status = 1
+    status = 0
     # beat()
     main(status)
     # hand_detect()
