@@ -170,7 +170,7 @@ class TelloHandler(object):
                        cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv.imshow('Tello Gesture Recognition', image)
 
-        cv.destroyAllWindows()
+        #cv.destroyAllWindows()
 
 
     def preprocess_image(self, frame, scale=100):
@@ -187,9 +187,16 @@ class TelloHandler(object):
         return image
 
     def interrupt_all(self):
+        self.stop_drone()
         self.INTERRUPT = True
-        cv.destroyAllWindows()
+        print("Killing cv window...")
+        try:
+            cv.destroyAllWindows()
+        except Exception as e:
+            print(e)
+        print("Wait for 2 seconds...")
         time.sleep(2)
+        print("RIP...")
         catch_interrupting()
 
     # Drone configuraitoon hanlding
@@ -206,6 +213,7 @@ class TelloHandler(object):
 
     def stop_drone(self):
         # End of processing
+        print("Stopping drone...")
         if self.on_tello:
             if self.drone.is_flying:
                 self.drone.land()
