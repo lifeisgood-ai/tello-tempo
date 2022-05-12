@@ -8,7 +8,7 @@ import platform
 import djitellopy
 from  tello_sound import TelloSound
 from tello_thread import TelloThread
-#pfrom tello_dance import TelloDance
+from tello_dance import TelloDance
 from tello_hand_detector import HandDetector
 
 PLATFORM = platform.system()
@@ -88,6 +88,8 @@ class TelloHandler(object):
         self.INTERRUPT = False
 
         self.tello_sound = TelloSound()
+        self.tello_dance = TelloDance(self.drone)
+        # self.timeout = TelloThread(target=self.validate_finger_change, args=(self.state, ))
         self.tello_thread = TelloThread()
         self.hand_detector = HandDetector()
 
@@ -108,18 +110,19 @@ class TelloHandler(object):
                 # start music/dance
                 print("playing music/dance")
                 self.tello_sound.play_music()
-                pass
+
             elif self.state == 2:
                 # stop music/dance
                 print("stopping music/dance")
                 self.tello_sound.stop_music()
-                pass
+
             elif self.state == 3:
                 # change music/dance
-                pass
+                self.tello_dance.swing()
+
             elif self.state == 4:
-                #
-                pass
+                self.tello_dance.stop()
+
             elif self.state == 5:
                 if not self.drone.is_flying:
                     self.drone.takeoff()
@@ -299,7 +302,8 @@ class TelloHandler(object):
             'q': lambda: self.interrupt_all(),
             'Key.tab': lambda: self.drone.takeoff(),
             'Key.backspace': lambda: self.drone.land(),
-            'v': lambda: self.change_state(5),
+            'c': lambda: self.change_state(3),
+            'v': lambda: self.change_state(4),
         }
         self.key_listener = keyboard.Listener(on_press=self.on_press,
                                               on_release=self.on_release)
