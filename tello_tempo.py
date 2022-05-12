@@ -86,6 +86,9 @@ class TelloHandler(object):
         #                       self.vid_stream.width,
         #                       green_lower, green_upper)
         self.INTERRUPT = False
+        self.DELAY = 2 # secnods
+        self.VALID_CHANGE = False
+        self.state = 0
 
         self.tello_sound = TelloSound()
         self.tello_dance = TelloDance(self.drone)
@@ -93,7 +96,7 @@ class TelloHandler(object):
         self.tello_thread = TelloThread()
         self.hand_detector = HandDetector()
 
-        self.state= 0
+
 
     def dance(self):
         self.on_dance = True
@@ -135,6 +138,27 @@ class TelloHandler(object):
             else:
                 pass
 
+    # def validate_finger_change(self, state):
+    #     print("## validate_finger_change")
+    #     timeout = time.time() + self.DELAY
+    #
+    #     while not self.VALID_CHANGE:
+    #         if time.time() > timeout:
+    #             self.VALID_CHANGE = True
+    #             self.state = state
+    #             time.sleep(.1)
+    #             print("## Finger change confirmed")
+    #
+    # def on_finger_change(self, state):
+    #     if self.state != state :
+    #         print("## Change of state")
+    #         self.VALID_CHANGE = False
+    #         if self.timeout.is_alive():
+    #             self.timeout.kill()
+    #             self.timeout.join()
+    #         self.timeout = TelloThread(target=self.validate_finger_change, args=(state, ))
+    #         self.timeout.start()
+    #         #self.validate_finger_change(state)
 
     # Image handling
     def capture(self):
@@ -164,6 +188,10 @@ class TelloHandler(object):
             # image, state = self.hand_detector.process_finger_counter(image)
 
             self.change_state(state)
+            # self.on_finger_change(state)
+            # if self.VALID_CHANGE:
+            #     self.change_state(state)
+            #    self.VALID_CHANGE=False
 
             # Process Key (ESC: end)
             key = cv.waitKey(1) & 0xff

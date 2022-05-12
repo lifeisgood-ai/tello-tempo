@@ -46,16 +46,19 @@ def func():
     print('thread running func')
     time.sleep(1)
 
-def bbar():
+def bbar(status):
+  print(status)
   while True:
     print('thread running bbar')
     time.sleep(2)
  
 if __name__ == "__main__":
+  status= 111
   t1 = TelloThread(target = func)
-  t2 = TelloThread(target = bbar)
+  t2 = TelloThread(target = bbar, args=(status,))
   t1.start()
   t2.start()
+  print("wait 2 sec")
   time.sleep(2)
   print(threading.get_ident())
   print(threading.get_native_id()) # process id
@@ -65,4 +68,4 @@ if __name__ == "__main__":
   t2.join()
 
   if not t1.is_alive():
-    print('thread killed')
+    print('thread t1 killed')
