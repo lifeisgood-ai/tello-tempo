@@ -19,9 +19,10 @@ import math
 import time
 
 class HandDetector():
-    def __init__(self, mode=False, maxHands=2, detectionCon=0.5, trackCon=0.5):
+    def __init__(self, mode=False, maxHands=2,modelComplexity=1, detectionCon=0.5, trackCon=0.5):
         self.mode = mode
         self.maxHands = maxHands
+        self.modelComplex = modelComplexity
         self.detectionCon = detectionCon
         self.trackCon = trackCon
 
@@ -35,7 +36,7 @@ class HandDetector():
         # self.state [0..]
         # 100 reglage volume
         # 1 doigt 1 ...
-        self.hand_state = 0
+        #self.hand_state = 0
 
     def init_sound_parameters(self):
         if PLATFORM == P_WINDOWS:
@@ -79,60 +80,100 @@ class HandDetector():
                 # print(id, lm)
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
-                print(id, cx, cy)
+                #print(id, cx, cy)
                 lmList.append([id, cx, cy])
                 if draw:
                     cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
         return lmList
 
-    def process_volume(self, img):
+    def process_volume(self, img,lmList):
         pTime = 0
         cTime = 0
+        tipIds = [4, 8, 12, 16, 20]
+        hand_state = 0
 
         # Detection de la main et des 21 features avec les positions en X et Y de chaque feature
-        img = self.findHands(img)
-        lmList = self.findPosition(img, draw=False)
+        #img = self.findHands(img)
+        #lmList = self.findPosition(img, draw=False)
 
         if len(lmList) != 0:
             # print(lmList[4], lmList[8])
             x1, y1 = lmList[4][1], lmList[4][2]  # Coordonnées X et Y du feature 4
             x2, y2 = lmList[8][1], lmList[8][2]  # Coordonnées X et  Y du feature 8
-            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # Coordonnées du milieu entre 4 et 8
-            # compute real angle
-            angle= 10
-            if angle < 30:
-                self.hand_state=100
-                cv.circle(img, (x1, y1), 15, (255, 0, 255), cv.FILLED)
-                cv.circle(img, (x2, y2), 15, (255, 0, 255), cv.FILLED)
-                cv.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-                cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
+            
+            if x2-x1 != 0:
+            
+                tangente = (y2-y1)/(x2-x1)
+                angle =  (math.atan(tangente))* (180/3.14)
+                
+                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # Coordonnées du milieu entre 4 et 8
+                print(angle, tangente)
 
-                length = math.hypot(x2 - x1, y2 - y1)  # Calcul de la distance entre les doigts
+                # compute real angle
+                if angle > -10 and angle <10:
+                    #self.hand_state=100
+                    hand_state=100
+                    cv.circle(img, (x1, y1), 15, (255, 0, 255), cv.FILLED)
+                    cv.circle(img, (x2, y2), 15, (255, 0, 255), cv.FILLED)
+                    cv.line(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
+                    cv.circle(img, (cx, cy), 15, (255, 0, 255), cv.FILLED)
+    
+                    length = math.hypot(x2 - x1, y2 - y1)  # Calcul de la distance entre les doigts
+    
+                    # Corrélation entre le volume et la distance entre les doigts
+                    self.vol = np.interp(length, [50, 300], [self.minVol, self.maxVol])
+                    self.volBar = np.interp(length, [50, 300], [400, 150])
+                    self.volPer = np.interp(length, [50, 300], [0, 100])
+                    print(angle, tangente)
+                    
+                    if PLATFORM == P_WINDOWS:
+                        self.volume.SetMasterVolumeLevel(self.vol, None)
+                    else:
+                        call(["amixer", "-D", "pulse", "sset", "Master", f"{self.vol}%"])
+    
+                    # Passage de la couleur en vert lorsque la distannce est minime
+                    if length < 50:
+                        cv.circle(img, (cx, cy), 15, (0, 255, 0), cv.FILLED)
+                    # Calcul de la fréquence de rafraichissement de l'image
+                    cTime = time.time()
+                    fps = 1 / (cTime - pTime)
+                    pTime = cTime
+                    
+                    cv.rectangle(img, (50, 150), (85, 400), (255, 0, 0), 3)
+                    cv.rectangle(img, (50, int(self.volBar)), (85, 400), (255, 0, 0), cv.FILLED)
+                    cv.putText(img, f'{int(self.volPer)} %', (40, 450), cv.FONT_HERSHEY_COMPLEX,
+                                1, (255, 0, 0), 3)
+                    cv.putText(img, f'FPS: {int(fps)}', (400, 70), cv.FONT_HERSHEY_PLAIN,
+                            3, (255, 0, 0), 3)
+                else :
+                    fingers = []
+                    # Pouce
+                    if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1]:
+                        fingers.append(1)
+                    else:
+                        fingers.append(0)
+             
+                    # 4 autres doigts
+                    for id in range(1, 5):
+                        if lmList[tipIds[id]][2] < lmList[tipIds[id] - 2][2]:
+                            fingers.append(1)
+                        else:
+                            fingers.append(0)
+             
+                    hand_states= fingers.count(1)
+                    #hand_states= fingers.count(1)
+                    
+                    cTime = time.time()
+                    fps = 1 / (cTime - pTime)
+                    pTime = cTime
+                    
+                    cv.putText(img, str(hand_states), (45, 375), cv.FONT_HERSHEY_PLAIN,
+                        10, (255, 0, 0), 25)
+                    cv.putText(img, f'FPS: {int(fps)}', (400, 70), cv.FONT_HERSHEY_PLAIN,
+                            3, (255, 0, 0), 3)
+            
+                    return hand_states, img
 
-                # Corrélation entre le volume et la distance entre les doigts
-                self.vol = np.interp(length, [50, 300], [self.minVol, self.maxVol])
-                self.volBar = np.interp(length, [50, 300], [400, 150])
-                self.volPer = np.interp(length, [50, 300], [0, 100])
-                print(int(length), self.vol)
-                if PLATFORM == P_WINDOWS:
-                    self.volume.SetMasterVolumeLevel(self.vol, None)
-                else:
-                    call(["amixer", "-D", "pulse", "sset", "Master", f"{self.vol}%"])
+    
 
-                # Passage de la couleur en vert lorsque la distannce est minime
-                if length < 50:
-                    cv.circle(img, (cx, cy), 15, (0, 255, 0), cv.FILLED)
-
-        cv.rectangle(img, (50, 150), (85, 400), (255, 0, 0), 3)
-        cv.rectangle(img, (50, int(self.volBar)), (85, 400), (255, 0, 0), cv.FILLED)
-        cv.putText(img, f'{int(self.volPer)} %', (40, 450), cv.FONT_HERSHEY_COMPLEX,
-                    1, (255, 0, 0), 3)
-
-        # Calcul de la fréquence de rafraichissement de l'image
-        cTime = time.time()
-        fps = 1 / (cTime - pTime)
-        pTime = cTime
-
-        return img, self.hand_state
-
-
+    
