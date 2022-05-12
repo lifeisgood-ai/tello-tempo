@@ -184,7 +184,7 @@ class TelloHandler(object):
             image = cv.resize(my_frame, (self.img_width, self.img_height))
             image = cv.flip(image, 1)
 
-            image, state = self.hand_detector.process_volume(image)
+            image, state = self.hand_detector.process_fingers(image)
             # image, state = self.hand_detector.process_finger_counter(image)
 
             self.change_state(state)
