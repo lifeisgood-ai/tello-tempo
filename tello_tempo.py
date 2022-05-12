@@ -190,6 +190,7 @@ class TelloHandler(object):
         return image
 
     def interrupt_all(self):
+        self.drone.send_rc_control(0, 0, 0, 0)
         self.stop_drone()
         self.INTERRUPT = True
         print("Killing cv window...")
@@ -202,11 +203,15 @@ class TelloHandler(object):
         print("RIP...")
         catch_interrupting()
 
+    def stall(self):
+        self.drone.send_rc_control(0, 0, 0, 0)
+
     # Drone configuraitoon hanlding
     def init_drone(self):
         """Connect, uneable streaming and subscribe to events"""
         if self.on_tello:
             # self.drone.log.set_level(2)
+            self.stall()
             self.drone.connect()
             self.drone.streamon()
             # self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA,
