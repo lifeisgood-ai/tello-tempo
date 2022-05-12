@@ -286,8 +286,6 @@ class TelloHandler(object):
             # arrow keys for fast turns and altitude adjustments
             'Key.left': lambda: self.drone.counter_clockwise(),
             'Key.right': lambda: self.drone.clockwise(),
-            'Key.up': lambda: self.drone.up(),
-            'Key.down': lambda: self.drone.down(),
 
             'p': lambda: print("hello"),
             't': lambda: self.toggle_tracking(),
@@ -304,6 +302,12 @@ class TelloHandler(object):
             'Key.backspace': lambda: self.drone.land(),
             'c': lambda: self.change_state(3),
             'v': lambda: self.change_state(4),
+            'Key.up': lambda: self.drone.move_up(20),
+            'Key.down': lambda: self.drone.move_down(20),
+            'Key.left': lambda: self.drone.move_left(20),
+            'Key.right': lambda: self.drone.move_right(20),
+            'x': lambda: self.stall()
+
         }
         self.key_listener = keyboard.Listener(on_press=self.on_press,
                                               on_release=self.on_release)
