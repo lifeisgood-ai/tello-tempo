@@ -6,7 +6,7 @@ import os, sys, time
 
 import platform
 import djitellopy
-from  tello_sound import TelloSound
+from tello_sound import TelloSound
 from tello_thread import TelloThread
 from tello_dance import TelloDance
 from tello_hand_detector import HandDetector
@@ -27,12 +27,14 @@ from subprocess import call
 import cv2 as cv
 from pynput import keyboard
 
+
 def catch_interrupting():
     print('Interrupted')
     try:
         sys.exit(0)
     except SystemExit:
         os._exit(0)
+
 
 def main(status):
     tello_handler = TelloHandler(status)
@@ -44,6 +46,7 @@ def main(status):
         tello_handler.stop_drone()
         catch_interrupting()
 
+
 class TelloHandler(object):
     """
     TelloHandler builds keyboard controls on top of TelloPy as well
@@ -52,7 +55,6 @@ class TelloHandler(object):
 
     def __init__(self, status):
         self.on_tello = status
-
 
         self.prev_flight_data = None
         self.record = False
@@ -65,8 +67,8 @@ class TelloHandler(object):
         self.init_controls()
 
         # container for processing the packets into frames
-        #self.container = av.open(self.drone.get_video_stream())
-        #self.vid_stream = self.container.streams.video[0]
+        # self.container = av.open(self.drone.get_video_stream())
+        # self.vid_stream = self.container.streams.video[0]
         self.out_file = None
         self.out_stream = None
         self.out_name = None
@@ -75,12 +77,12 @@ class TelloHandler(object):
         # tracking a color
         green_lower = (30, 50, 50)
         green_upper = (80, 255, 255)
-        #red_lower = (0, 50, 50)
+        # red_lower = (0, 50, 50)
         # red_upper = (20, 255, 255)
         # blue_lower = (110, 50, 50)
         # upper_blue = (130, 255, 255)
-        self.img_width= 640
-        self.img_height= 480
+        self.img_width = 640
+        self.img_height = 480
 
         self.track_cmd = ""
         # self.tracker = Tracker(self.vid_stream.height,
@@ -162,30 +164,13 @@ class TelloHandler(object):
             else:
                 pass
 
-    # def validate_finger_change(self, state):
-    #     print("## validate_finger_change")
-    #     timeout = time.time() + self.DELAY
-    #
-    #     while not self.VALID_CHANGE:
-    #         if time.time() > timeout:
-    #             self.VALID_CHANGE = True
-    #             self.state = state
-    #             time.sleep(.1)
-    #             print("## Finger change confirmed")
-    #
-    # def on_finger_change(self, state):
-    #     if self.state != state :
-    #         print("## Change of state")
-    #         self.VALID_CHANGE = False
-    #         if self.timeout.is_alive():
-    #             self.timeout.kill()
-    #             self.timeout.join()
-    #         self.timeout = TelloThread(target=self.validate_finger_change, args=(state, ))
-    #         self.timeout.start()
-    #         #self.validate_finger_change(state)
-
-    # Image handling
     def capture(self):
+        """
+        Handles the cv image frame capture loop
+
+        Returns:
+
+        """
         self.timeout_thread.start()
         state = self.INIT_STATE
         previous_state = self.INIT_STATE
@@ -206,13 +191,11 @@ class TelloHandler(object):
             else:
                 result, my_frame = self.cam.read()
 
-
-            #image = self.preprocess_image(my_frame)
+            # image = self.preprocess_image(my_frame)
             image = cv.resize(my_frame, (self.img_width, self.img_height))
             image = cv.flip(image, 1)
 
             image, state = self.hand_detector.process_fingers(image)
-            # image, state = self.hand_detector.process_finger_counter(image)
 
             if previous_state != state:
                 print(previous_state, '->', state)
@@ -227,12 +210,12 @@ class TelloHandler(object):
             key = cv.waitKey(1) & 0xff
 
             # Battery status and image rendering
-            cv.putText(image, "Shape/channels: {}".format(image.shape), (5, 30),
-                       cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            cv.putText(image, "Shape/channels: {}".format(image.shape), (5, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            #cv.putText(image, str(self.state), (500, 375), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
+
             cv.imshow('Tello Gesture Recognition', image)
 
             previous_state = state
-        #cv.destroyAllWindows()
 
     def check_change(self, state):
         """
@@ -277,6 +260,15 @@ class TelloHandler(object):
         time.sleep(.05)
 
     def preprocess_image(self, frame, scale=100):
+        """
+        Converts image to B&W, reduces size, flips image
+        Args:
+            frame:
+            scale:
+
+        Returns:
+
+        """
         # image = cv.resize(my_frame,(width, height))
         image = frame
         image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
@@ -325,12 +317,23 @@ class TelloHandler(object):
         self.tello_thread.join()
 
         self.key_listener.join()
+
     def stall(self):
+        """
+        Appears to be useful for keyboard control :-|
+        Returns:
+
+        """
         self.drone.send_rc_control(0, 0, 0, 0)
 
-    # Drone configuraitoon hanlding
+    # Drone configuration handling
     def init_drone(self):
-        """Connect, uneable streaming and subscribe to events"""
+        """
+        Connect, enable streaming and subscribe to events
+
+        Returns:
+
+        """
         if self.on_tello:
             # self.drone.log.set_level(2)
             self.stall()
@@ -358,17 +361,17 @@ class TelloHandler(object):
         try:
             self.keydown = True
             keyname = str(keyname).strip('\'')
-            #print('+' + keyname)
+            # print('+' + keyname)
             if keyname == 'Key.esc':
-                #self.drone.quit()
+                # self.drone.quit()
                 exit(0)
             if keyname in self.controls:
                 key_handler = self.controls[keyname]
                 if isinstance(key_handler, str):
-                    #print("press", key_handler)
+                    # print("press", key_handler)
                     getattr(self.drone, key_handler)(self.speed)
                 else:
-                    #print("press", key_handler)
+                    # print("press", key_handler)
                     key_handler()
         except AttributeError:
             print('special key {0} pressed'.format(keyname))
@@ -378,21 +381,19 @@ class TelloHandler(object):
             """
             print(e)
 
-
     def on_release(self, keyname):
         """Reset on key up from keyboard listener"""
         self.keydown = False
         keyname = str(keyname).strip('\'')
-        #print('-' + keyname)
+        # print('-' + keyname)
         if keyname in self.controls:
             key_handler = self.controls[keyname]
             print('... released')
-            #if isinstance(key_handler, str):
-                #print("release ", key_handler)
+            # if isinstance(key_handler, str):
+            # print("release ", key_handler)
             #    getattr(self.drone, key_handler)(0)
-            #else:
+            # else:
             #    key_handler()
-
 
     def init_controls(self):
         """Define keys and add listener"""
@@ -403,7 +404,7 @@ class TelloHandler(object):
             'd': 'right',
             'Key.space': 'up',
             'Key.shift': 'down',
-            #'Key.shift_r': 'down',
+            # 'Key.shift_r': 'down',
             'r': 'counter_clockwise',
             'e': 'clockwise',
             'i': lambda: self.drone.flip_forward(),
@@ -419,7 +420,6 @@ class TelloHandler(object):
             'y': lambda: self.toggle_recording(),
             'z': lambda: self.toggle_zoom(),
             'Key.enter': lambda: self.take_picture(),
-
 
             # validated buttons
             'b': lambda: self.change_state(1),
@@ -441,11 +441,12 @@ class TelloHandler(object):
         self.key_listener.start()
         # self.key_listener.join()
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     # status == 0 => webcam
     # status == 1 => drone
     status = 1
+    status = 0
     # beat()
     main(status)
     # hand_detect()
