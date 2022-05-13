@@ -24,7 +24,9 @@ import time
 
 
 class HandDetector():
-    FINGER_SOUND_ANGLE = 10
+
+    FINGER_SOUND_ANGLE = 30
+    DEFAULT_STATE = 0
 
     def __init__(self, mode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, trackCon=0.5):
         self.mode = mode
@@ -43,7 +45,7 @@ class HandDetector():
         # self.state [0..]
         # 100 reglage volume
         # 1 doigt 1 ...
-        self.hand_state = 0
+        self.hand_state = self.DEFAULT_STATE
 
     def init_sound_parameters(self):
         if PLATFORM == P_WINDOWS:
@@ -104,6 +106,7 @@ class HandDetector():
         pTime = 0
         cTime = 0
         tipIds = [4, 8, 12, 16, 20]
+        d = self.DEFAULT_STATE
         self.hand_state = 0
 
         # Detection de la main et des 21 features avec les positions en X et Y de chaque feature
