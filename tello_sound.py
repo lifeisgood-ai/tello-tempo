@@ -1,4 +1,7 @@
-# Use the sounddevice module
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
 # http://python-sounddevice.readthedocs.io/en/0.3.10/
 
 import numpy as np

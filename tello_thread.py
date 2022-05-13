@@ -1,6 +1,6 @@
-# Python program using
-# traces to kill threads
- 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
  # good ref here : https://www.geeksforgeeks.org/python-different-ways-to-kill-a-thread/
  
 import sys

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 # Use the sounddevice module
 # http://python-sounddevice.readthedocs.io/en/0.3.10/
 
