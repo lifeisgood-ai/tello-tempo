@@ -5,18 +5,18 @@
  
 import sys
 import trace
-import threading
+from threading import Thread, Event
 import time
 
-class TelloThread(threading.Thread):
+class TelloThread(Thread):
   def __init__(self, *args, **keywords):
-    threading.Thread.__init__(self, *args, **keywords)
+    Thread.__init__(self, *args, **keywords)
     self.killed = False
 
   def start(self):
     self.__run_backup = self.run
     self.run = self.__run     
-    threading.Thread.start(self)
+    Thread.start(self)
  
   def __run(self):
     sys.settrace(self.globaltrace)

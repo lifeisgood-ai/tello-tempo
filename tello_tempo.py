@@ -10,6 +10,7 @@ from  tello_sound import TelloSound
 from tello_thread import TelloThread
 from tello_dance import TelloDance
 from tello_hand_detector import HandDetector
+from threading import Thread, Event
 
 PLATFORM = platform.system()
 P_WINDOWS = 'Windows'
@@ -86,30 +87,53 @@ class TelloHandler(object):
         #                       self.vid_stream.width,
         #                       green_lower, green_upper)
         self.INTERRUPT = False
-        self.DELAY = 2 # secnods
-        self.VALID_CHANGE = False
-        self.state = 0
+        self.TIMEOUT_FINGERS = 0.5  # seconds before validating a count of fingers
+
+        self.INIT_STATE = 0
+        self.state = self.INIT_STATE
+        self.state_validation = self.INIT_STATE
+
 
         self.tello_sound = TelloSound()
         self.tello_dance = TelloDance(self.drone)
-        # self.timeout = TelloThread(target=self.validate_finger_change, args=(self.state, ))
+
+
+        # Event and Thread to handle timeout of finger detection
+        self.evt_restart_timer = Event()
+        self.evt_stop_counter = Event()
+        self.evt_validate_state = Event()
+
+        self.evt_restart_timer.clear()
+        self.evt_stop_counter.clear()
+        self.evt_validate_state.clear()
+
+        self.timeout_thread = TelloThread(target=self.th_counter,
+                                          args=(self.evt_restart_timer,
+                                                self.evt_validate_state,
+                                                self.evt_stop_counter,))
+
         self.tello_thread = TelloThread()
+
         self.hand_detector = HandDetector()
 
-
-
-    def dance(self):
-        self.on_dance = True
-        # make movements
-        # sync it with music
-
     def change_state(self, state):
+        """
+
+        Args:
+            state: the int value returned by detection of fingers or with keybord call
+
+        Returns:
+            void
+        """
         if self.state == state:
             pass
         else:
             print("State changed...")
             self.state = state
-            if self.state == 1:
+            if self.state == 0:
+                print('Do nothing state 0')
+                pass
+            elif self.state == 1:
                 # start music/dance
                 print("playing music/dance")
                 self.tello_sound.play_music()
@@ -162,6 +186,9 @@ class TelloHandler(object):
 
     # Image handling
     def capture(self):
+        self.timeout_thread.start()
+        state = self.INIT_STATE
+        previous_state = self.INIT_STATE
 
         if self.on_tello:
             print("Getting image from drone")
@@ -187,11 +214,14 @@ class TelloHandler(object):
             image, state = self.hand_detector.process_fingers(image)
             # image, state = self.hand_detector.process_finger_counter(image)
 
-            self.change_state(state)
-            # self.on_finger_change(state)
-            # if self.VALID_CHANGE:
-            #     self.change_state(state)
-            #    self.VALID_CHANGE=False
+            if previous_state != state:
+                print(previous_state, '->', state)
+                self.evt_stop_counter.set()
+                self.check_change(state)
+
+            if self.evt_validate_state.is_set():
+                self.evt_validate_state.clear()
+                self.change_state(self.state_validation)
 
             # Process Key (ESC: end)
             key = cv.waitKey(1) & 0xff
@@ -201,8 +231,50 @@ class TelloHandler(object):
                        cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv.imshow('Tello Gesture Recognition', image)
 
+            previous_state = state
         #cv.destroyAllWindows()
 
+    def check_change(self, state):
+        """
+
+        Args:
+            state: int value to check
+
+        Returns: void
+
+        """
+        self.state_validation = state
+        self.evt_restart_timer.set()
+
+    def th_counter(self, evt_restart_timer, evt_validate_state, evt_stop_counter):
+        """
+        Function executer in the thread
+        Args:
+            evt_restart_timer:
+            evt_validate_state:
+            evt_stop_counter:
+
+        Returns:
+
+        """
+        d = self.TIMEOUT_FINGERS
+        while True:
+            if evt_restart_timer.is_set():
+                evt_restart_timer.clear()
+                evt_stop_counter.clear()
+                timeout = time.time() + d
+                #print(f"Checking {self.checking_state}...")
+                while True:
+                    if evt_stop_counter.is_set():
+                        #print("Timer interrupted")
+                        break
+                    if time.time() > timeout:
+                        #print("Change validated")
+                        evt_validate_state.set()
+                        break
+                    time.sleep(.05)
+
+        time.sleep(.05)
 
     def preprocess_image(self, frame, scale=100):
         # image = cv.resize(my_frame,(width, height))
