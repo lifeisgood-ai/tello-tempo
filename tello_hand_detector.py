@@ -62,9 +62,12 @@ class HandDetector():
         else:
             mixer = alsaaudio.Mixer()
             self.vol = mixer.getvolume()
-
+            print("Current volume", self.vol)
             self.minVol = 0
             self.maxVol = 200
+
+        # hack
+        self.minVol = 50
 
         print("volume init ", self.vol)
         self.volBar = 400
