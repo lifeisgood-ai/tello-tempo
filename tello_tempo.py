@@ -290,6 +290,12 @@ class TelloHandler(object):
         return image
 
     def interrupt_all(self):
+        """
+        Function to cleanly stop the drone
+
+        Returns:
+
+        """
         self.drone.send_rc_control(0, 0, 0, 0)
         self.stop_drone()
         self.INTERRUPT = True
@@ -298,11 +304,27 @@ class TelloHandler(object):
             cv.destroyAllWindows()
         except Exception as e:
             print(e)
+        self.stop_threads()
         print("Wait for 2 seconds...")
         time.sleep(2)
         print("RIP...")
         catch_interrupting()
 
+    def stop_threads(self):
+        """
+        Stop all thread declared
+
+        TODO: handle a list of threads instead
+
+        Returns:
+
+        """
+        self.timeout_thread.kill()
+        self.timeout_thread.join()
+        self.tello_thread.kill()
+        self.tello_thread.join()
+
+        self.key_listener.join()
     def stall(self):
         self.drone.send_rc_control(0, 0, 0, 0)
 
