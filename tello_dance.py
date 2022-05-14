@@ -5,26 +5,27 @@
 # http://python-sounddevice.readthedocs.io/en/0.3.10/
 
 import time
+from tello_bridge import TelloBridge
 
 class TelloDance():
-	def __init__(self, drone):
+	def __init__(self, drone, bridge: TelloBridge):
 		self.drone = drone
+		self.bridge = bridge
 
 	def up(self, name="default"):
 		#
 		pass
 
-	def swing1(self):
-		print("Launch swing")
-		for i in range(4):
-			self.drone.send_rc_control(-20, 0, 0, 0)  # left
-			time.sleep(2)
-			self.stop()
-			time.sleep(.1)
-			self.drone.send_rc_control(20, 0, 0, 0)  # right
-			time.sleep(2)
-			self.stop()
-			time.sleep(.1)
+	def swing1(self, name):
+		print("Launch swing on music : ", name)
+		speed_side = 20
+		sign = 1
+		while True:
+			if self.bridge.changed_beat:
+				sign = -1 * sign
+				self.bridge.changed_beat = 0
+				self.drone.send_rc_control(sign * speed_side, 0, 0, 0)
+
 
 		self.stop()
 
@@ -44,6 +45,7 @@ class TelloDance():
 
 	def stop(self):
 		self.drone.send_rc_control(0, 0, 0, 0)
+		time.sleep(.1)
 
 
 if __name__ == '__main__':

@@ -11,6 +11,7 @@ from tello_thread import TelloThread
 from tello_dance import TelloDance
 from tello_hand_detector import HandDetector
 from threading import Thread, Event
+from tello_bridge import TelloBridge
 
 PLATFORM = platform.system()
 P_WINDOWS = 'Windows'
@@ -38,6 +39,12 @@ def catch_interrupting():
 
 def main(status):
     tello_handler = TelloHandler(status)
+    #b=0
+    # tello_sound = TelloSound(b)
+    # tello_sound.load_libro()
+    # tello_sound.go()
+
+    #sys.exit(0)
     tello_handler.init_drone()
     try:
         tello_handler.capture()
@@ -95,9 +102,13 @@ class TelloHandler(object):
         self.state = self.INIT_STATE
         self.state_validation = self.INIT_STATE
 
+        self.cb = 0
 
-        self.tello_sound = TelloSound()
-        self.tello_dance = TelloDance(self.drone)
+        self.tello_bridge = TelloBridge()
+        self.tello_sound = TelloSound(self.tello_bridge)
+        self.tello_dance = TelloDance(self.drone, self.tello_bridge)
+
+        self.hand_detector = HandDetector()
 
 
         # Event and Thread to handle timeout of finger detection
@@ -114,9 +125,10 @@ class TelloHandler(object):
                                                 self.evt_validate_state,
                                                 self.evt_stop_counter,))
 
-        self.tello_thread = TelloThread()
+        self.dance_thread = TelloThread(target=self.tello_dance.swing1  ,
+                                        args=("daddy",))
 
-        self.hand_detector = HandDetector()
+        self.sound_thread = TelloThread(target=self.tello_sound.go)
 
     def change_state(self, state):
         """
@@ -147,10 +159,17 @@ class TelloHandler(object):
 
             elif self.state == 3:
                 # change music/dance
-                self.tello_dance.swing()
+                self.dance_thread.start()
+                self.sound_thread.start()
+                #self.tello_dance.swing()
 
             elif self.state == 4:
-                self.tello_dance.stop()
+                #self.tello_dance.stop()
+                self.dance_thread.kill()
+                self.dance_thread.join()
+                self.sound_thread.kill()
+                self.sound_thread.join()
+                self.drone.send_rc_control(0, 0, 0, 0)
 
             elif self.state == 5:
                 if not self.drone.is_flying:
@@ -211,7 +230,7 @@ class TelloHandler(object):
 
             # Battery status and image rendering
             cv.putText(image, "Shape/channels: {}".format(image.shape), (5, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            #cv.putText(image, str(self.state), (500, 375), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
+            cv.putText(image, str(self.state), (500, 375), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
 
             cv.imshow('Tello Gesture Recognition', image)
 
@@ -336,9 +355,19 @@ class TelloHandler(object):
         """
         if self.on_tello:
             # self.drone.log.set_level(2)
-            self.stall()
+            print("Connecting to drone")
             self.drone.connect()
+
+            # print("Sending 'command' to drone")
+            # self.drone.send_control_command("command")
+
+            print("Stalling drone")
+            self.stall()
+
+            print("Activating stream on drone")
             self.drone.streamon()
+
+            #time.sleep(3)
             # self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA,
             #                      self.flight_data_handler)
             # self.drone.subscribe(self.drone.EVENT_FILE_RECEIVED,
@@ -446,7 +475,7 @@ if __name__ == '__main__':
     # status == 0 => webcam
     # status == 1 => drone
     status = 1
-    status = 0
+    #   cstatus = 0
     # beat()
     main(status)
     # hand_detect()
