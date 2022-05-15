@@ -438,13 +438,13 @@ class TelloHandler(object):
             't': lambda: self.toggle_tracking(),
             'y': lambda: self.toggle_recording(),
             'z': lambda: self.toggle_zoom(),
-            'Key.enter': lambda: self.take_picture(),
+            'Key.enter': lambda: self.tello_dance.run_spirale(),
 
             # validated buttons
             'b': lambda: self.change_state(1),
             'n': lambda: self.change_state(2),
             'q': lambda: self.interrupt_all(),
-            'Key.tab': lambda: self.drone.takeoff(),
+            'Key.tab': lambda: self.drone.takeoff(),    
             'Key.backspace': lambda: self.drone.land(),
             'c': lambda: self.change_state(3),
             'v': lambda: self.change_state(4),

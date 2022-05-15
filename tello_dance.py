@@ -5,6 +5,8 @@
 # http://python-sounddevice.readthedocs.io/en/0.3.10/
 
 import time
+import numpy as np
+
 from tello_bridge import TelloBridge
 
 class TelloDance():
@@ -47,11 +49,49 @@ class TelloDance():
 		self.drone.send_rc_control(0, 0, 0, 0)
 		time.sleep(.1)
 
-	
+	def move_spirale(self, t, pos):
+		return [np.cos(t) * 10, np.sin(t) * 10, pos[2] + t, 0]
+
+	def difference(self, list1, list2):
+		zip_object = zip(list1, list2)
+		difference = []
+		for list1_i, list2_i in zip_object:
+			difference.append(list2_i - list1_i)
+		return difference
+
+	def run_spirale(self):
+		TEMPO=0.05
+		t=0
+		pos=[20, 20, 0, 0]
+		speed=50
+		PADDING=10
+
+		next_pos = pos
+		for k in range(5):
+			t+=1
+			pos_ = self.move_spirale(t, next_pos)
+			next_pos = self.difference(next_pos, pos_)
+			if next_pos[0] > 0:
+				next_pos[0]+=PADDING
+			else:
+				next_pos[0]-=PADDING
+			if next_pos[1] > 0:
+				next_pos[1]+=PADDING
+			else:
+				next_pos[1]-=PADDING
+			print(t, next_pos)
+			print('before move')
+
+			self.drone.go_xyz_speed(int(next_pos[0]), int(next_pos[1]), int(next_pos[2])+PADDING, speed)
+			print("move " , int(next_pos[0]), int(next_pos[1]), int(next_pos[2])+PADDING, speed)
+			print('move done')
+	#         time.sleep(TEMPO)
 
 if __name__ == '__main__':
-	td = TelloDance()
-	td.stop()
+	td = TelloDance("drone", TelloBridge())
+	td.spirale("b")
+
+	#td.stop()
 # from pydub.playback import play
 # from pydub import AudioSegment
 
