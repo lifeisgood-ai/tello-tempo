@@ -70,8 +70,8 @@ class TelloHandler(object):
         self.init_drone()
         self.init_controls()
 
-        self.img_width = 640
-        self.img_height = 480
+        self.img_width = 640*2
+        self.img_height = 480*2
 
         self.track_cmd = ""
         # self.tracker = Tracker(self.vid_stream.height,
@@ -79,7 +79,7 @@ class TelloHandler(object):
         #                       green_lower, green_upper)
         self.INTERRUPT = False
         self.TIMEOUT_FINGERS = 0.5  # seconds before validating a count of fingers
-        self.MOVE_DISTANCE  = 30
+        self.MOVE_DISTANCE  = 50
 
         self.INIT_STATE = 0
         self.state = self.INIT_STATE
@@ -121,7 +121,7 @@ class TelloHandler(object):
         """
 
         Args:
-            state: the int value returned by detection of fingers or with keybord call
+              state: the int value returned by detection of fingers or with keybord call
 
         Returns:
             void
@@ -137,7 +137,7 @@ class TelloHandler(object):
             elif self.state == 1:
                 # start music/dance
                 print("playing music/dance")
-                self.tello_sound.play_music()
+                self.tello_sound.play_music(name="audio/daddys_car.mp3")
 
             elif self.state == 2:
                 # stop music/dance
@@ -146,7 +146,7 @@ class TelloHandler(object):
 
             elif self.state == 3:
                 # change music/dance
-                self.sound_thread =  self.create_thread(self.tello_sound.go_for_music)
+                self.sound_thread =  self.create_thread(self.tello_sound.go_for_music, "default1")
                 self.dance_thread = self.create_thread(self.tello_dance.swing1)
                 self.dance_thread.start()
                 self.sound_thread.start()
@@ -164,7 +164,7 @@ class TelloHandler(object):
             elif self.state == 5:
                 if not self.drone.is_flying:
                     self.drone.takeoff()
-                self.change_state(1)
+                #self.change_state(1)
                 # takeoff - thumb up
                 pass
             elif self.state == 100:
@@ -220,7 +220,7 @@ class TelloHandler(object):
 
             # Battery status and image rendering
             cv.putText(image, "Shape/channels: {}".format(image.shape), (5, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv.putText(image, str(self.state), (500, 375), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
+            cv.putText(image, str(self.state), (500*2, 375*2), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
 
             cv.imshow('Tello Gesture Recognition', image)
 
@@ -335,6 +335,10 @@ class TelloHandler(object):
         """
         self.drone.send_rc_control(0, 0, 0, 0)
 
+    def battery_level(self):
+        # print(f"Battery level is {tello.get_battery()}%")
+        print(f"Battery level is {self.drone.get_battery()}%")
+
     # Drone configuration handling
     def init_drone(self):
         """
@@ -417,34 +421,34 @@ class TelloHandler(object):
     def init_controls(self):
         """Define keys and add listener"""
         self.controls = {
-            'w': 'forward',
-            's': 'backward',
-            'a': 'left',
-            'd': 'right',
-            'Key.space': 'up',
-            'Key.shift': 'down',
-            # 'Key.shift_r': 'down',
-            'r': 'counter_clockwise',
-            'e': 'clockwise',
-            'i': lambda: self.drone.flip_forward(),
-            'k': lambda: self.drone.flip_back(),
-            'j': lambda: self.drone.flip_left(),
-            'l': lambda: self.drone.flip_right(),
-            # arrow keys for fast turns and altitude adjustments
-            'Key.left': lambda: self.drone.counter_clockwise(),
-            'Key.right': lambda: self.drone.clockwise(),
-
-            'p': lambda: print("hello"),
-            't': lambda: self.toggle_tracking(),
-            'y': lambda: self.toggle_recording(),
-            'z': lambda: self.toggle_zoom(),
-            'Key.enter': lambda: self.tello_dance.run_spirale(),
+            # 'w': 'forward',
+            # 's': 'backward',
+            # 'a': 'left',
+            # 'd': 'right',
+            # 'Key.space': 'up',
+            # 'Key.shift': 'down',
+            # # 'Key.shift_r': 'down',
+            # 'r': 'counter_clockwise',
+            # 'e': 'clockwise',
+            # 'i': lambda: self.drone.flip_forward(),
+            # 'k': lambda: self.drone.flip_back(),
+            # 'j': lambda: self.drone.flip_left(),
+            # 'l': lambda: self.drone.flip_right(),
+            # # arrow keys for fast turns and altitude adjustments
+            # 'Key.left': lambda: self.drone.counter_clockwise(),
+            # 'Key.right': lambda: self.drone.clockwise(),
+            #
+            # 'p': lambda: print("hello"),
+            # 't': lambda: self.toggle_tracking(),
+            # 'y': lambda: self.toggle_recording(),
+            # 'z': lambda: self.toggle_zoom(),
+            'Key.enter': lambda: self.tello_dance.draw_spirale(),
 
             # validated buttons
             'b': lambda: self.change_state(1),
             'n': lambda: self.change_state(2),
             'q': lambda: self.interrupt_all(),
-            'Key.tab': lambda: self.drone.takeoff(),    
+            'Key.tab': lambda: self.drone.takeoff(),
             'Key.backspace': lambda: self.drone.land(),
             'c': lambda: self.change_state(3),
             'v': lambda: self.change_state(4),
@@ -464,8 +468,10 @@ class TelloHandler(object):
 if __name__ == '__main__':
     # status == 0 => webcam
     # status == 1 => drone
+    #th = TelloHandler(1)
+    #th.battery_level()
     status = 1
-    #œstatus = 0
+    status = 0
     # beat()
     main(status)
     # hand_detect()
