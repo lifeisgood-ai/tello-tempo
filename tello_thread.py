@@ -5,7 +5,7 @@
  
 import sys
 import trace
-from threading import Thread, Event
+from threading import Thread, Event, get_ident, get_native_id
 import time
 
 class TelloThread(Thread):
@@ -60,8 +60,8 @@ if __name__ == "__main__":
   t2.start()
   print("wait 2 sec")
   time.sleep(2)
-  print(threading.get_ident())
-  print(threading.get_native_id()) # process id
+  print(get_ident())
+  print(get_native_id()) # process id
   t1.kill()
   t1.join()
   t2.kill()

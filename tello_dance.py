@@ -16,8 +16,8 @@ class TelloDance():
 		#
 		pass
 
-	def swing1(self, name):
-		print("Launch swing on music : ", name)
+	def swing1(self, _):
+		print("Launch swing on music : ")
 		speed_side = 20
 		sign = 1
 		while True:
@@ -47,6 +47,7 @@ class TelloDance():
 		self.drone.send_rc_control(0, 0, 0, 0)
 		time.sleep(.1)
 
+	
 
 if __name__ == '__main__':
 	td = TelloDance()

@@ -183,7 +183,7 @@ class HandDetector():
                 fps = 1 / (cTime - pTime)
                 pTime = cTime
 
-                #cv.putText(img, str(self.hand_state), (45, 375), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
+                cv.putText(img, str(self.hand_state), (45, 375), cv.FONT_HERSHEY_PLAIN, 10, (255, 0, 0), 25)
                 #cv.putText(img, f'FPS: {int(fps)}', (400, 70), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 0), 3)
 
             return img, self.hand_state
