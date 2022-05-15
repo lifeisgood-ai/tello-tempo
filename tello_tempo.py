@@ -63,31 +63,13 @@ class TelloHandler(object):
     def __init__(self, status):
         self.on_tello = status
 
-        self.prev_flight_data = None
-        self.record = False
-        self.tracking = False
         self.keydown = False
-        self.date_fmt = '%Y-%m-%d_%H%M%S'
         self.speed = 50
+
         self.drone = djitellopy.Tello()
         self.init_drone()
         self.init_controls()
 
-        # container for processing the packets into frames
-        # self.container = av.open(self.drone.get_video_stream())
-        # self.vid_stream = self.container.streams.video[0]
-        self.out_file = None
-        self.out_stream = None
-        self.out_name = None
-        self.start_time = time.time()
-
-        # tracking a color
-        green_lower = (30, 50, 50)
-        green_upper = (80, 255, 255)
-        # red_lower = (0, 50, 50)
-        # red_upper = (20, 255, 255)
-        # blue_lower = (110, 50, 50)
-        # upper_blue = (130, 255, 255)
         self.img_width = 640
         self.img_height = 480
 
