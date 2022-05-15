@@ -99,9 +99,30 @@ class TelloDance():
 			print('move done')
 	#         time.sleep(TEMPO)
 
+	def draw_spirale(self):
+		spiral = []
+		rayon=100
+		for t in np.arange(0, 2*np.pi, 0.1):
+			# add (theta, x, y)
+			spiral.append( (t, rayon * np.sin(t), rayon * np.cos(t), 0) )
+
+		previous_pos = [spiral[0][1], spiral[0][2], spiral[0][3]]
+
+		for item in spiral	:
+			t, x, y, z = item
+			pos= [x, y ,z]
+
+			#next_pos = self.difference(previous_pos, pos)
+			#x, y, z = next_pos
+
+			print(t, x, y, z)
+			print(t, int(x), int(y) , int(z))
+			self.drone.go_xyz_speed(int(x), int(y) , int(z), 50)
+
+
 if __name__ == '__main__':
 	td = TelloDance("drone", TelloBridge())
-	td.spirale("b")
+	td.draw_spirale()
 
 	#td.stop()
 # from pydub.playback import play
