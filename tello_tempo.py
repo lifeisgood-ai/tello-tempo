@@ -79,6 +79,7 @@ class TelloHandler(object):
         #                       green_lower, green_upper)
         self.INTERRUPT = False
         self.TIMEOUT_FINGERS = 0.5  # seconds before validating a count of fingers
+        self.MOVE_DISTANCE  = 30
 
         self.INIT_STATE = 0
         self.state = self.INIT_STATE
@@ -107,10 +108,14 @@ class TelloHandler(object):
                                                 self.evt_validate_state,
                                                 self.evt_stop_counter,))
 
-        self.dance_thread = TelloThread(target=self.tello_dance.swing1  ,
-                                        args=("daddy",))
+        #self.dance_thread = TelloThread(target=self.tello_dance.swing1  , args=("default1",))
+        self.dance_thread = TelloThread(target=self.tello_dance.swing1)
 
-        self.sound_thread = TelloThread(target=self.tello_sound.go)
+        # self.sound_thread = TelloThread(target=self.tello_sound.go_for_music)
+        self.sound_thread = self.create_thread(self.tello_sound.go_for_music, "default1")
+
+    def create_thread(self, func, *args):
+        return TelloThread(target=func, args=(args,))
 
     def change_state(self, state):
         """
@@ -141,12 +146,15 @@ class TelloHandler(object):
 
             elif self.state == 3:
                 # change music/dance
+                self.sound_thread =  self.create_thread(self.tello_sound.go_for_music)
+                self.dance_thread = self.create_thread(self.tello_dance.swing1)
                 self.dance_thread.start()
                 self.sound_thread.start()
                 #self.tello_dance.swing()
 
             elif self.state == 4:
                 #self.tello_dance.stop()
+                self.tello_sound.stop_music()
                 self.dance_thread.kill()
                 self.dance_thread.join()
                 self.sound_thread.kill()
@@ -440,10 +448,10 @@ class TelloHandler(object):
             'Key.backspace': lambda: self.drone.land(),
             'c': lambda: self.change_state(3),
             'v': lambda: self.change_state(4),
-            'Key.up': lambda: self.drone.move_up(20),
-            'Key.down': lambda: self.drone.move_down(20),
-            'Key.left': lambda: self.drone.move_left(20),
-            'Key.right': lambda: self.drone.move_right(20),
+            'Key.up': lambda: self.drone.move_up(self.MOVE_DISTANCE),
+            'Key.down': lambda: self.drone.move_down(self.MOVE_DISTANCE),
+            'Key.left': lambda: self.drone.move_left(self.MOVE_DISTANCE),
+            'Key.right': lambda: self.drone.move_right(self.MOVE_DISTANCE),
             'x': lambda: self.stall()
 
         }
@@ -457,7 +465,7 @@ if __name__ == '__main__':
     # status == 0 => webcam
     # status == 1 => drone
     status = 1
-    #   cstatus = 0
+    #œstatus = 0
     # beat()
     main(status)
     # hand_detect()
