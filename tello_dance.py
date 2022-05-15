@@ -13,22 +13,52 @@ class TelloDance():
 	def __init__(self, drone, bridge: TelloBridge):
 		self.drone = drone
 		self.bridge = bridge
+		self.LITTLE_PAUSE = 0.1 # timeout between rc_control commands
+		self.speed_side = 20
 
 	def up(self, name="default"):
 		#
 		pass
 
 	def swing1(self, _):
-		print("Launch swing on music : ")
-		speed_side = 20
+		#self.dance_right_left(_)
+		self.dance_swing2(_)
+		# self.patrol()
+		# self.draw_spirale()
+
+	def dance_right_left(self, _):
 		sign = 1
 		while True:
 			if self.bridge.changed_beat:
 				sign = -1 * sign
 				self.bridge.changed_beat = 0
-				self.drone.send_rc_control(sign * speed_side, 0, 0, 0)
+				self.drone.send_rc_control(
+					sign * self.speed_side, 0, 0, 0)
 
+		self.stop()
 
+	def dance_swing2(self, _):
+		print("Launch swing on music : ")
+		speed_side = 20
+		speed_up = 40
+		sign = 1
+		idx = 0
+		pos = [(speed_side, 0, speed_up, 0),
+			   (-1 * speed_side, 0, -1 * speed_up, 0),
+			   (-1* speed_side, 0, speed_up, 0),
+			   (speed_side, 0, -speed_up, 0),
+			   ]
+		rl, fb, td, yaw = pos[0]
+		while True:
+			if self.bridge.changed_beat:
+				self.stop()
+				if idx == 4:
+					idx = 0
+				self.bridge.changed_beat = 0
+				rl, fb, td, ya = pos[idx]
+				self.drone.send_rc_control(rl, fb, td, yaw)
+
+				idx += 1
 		self.stop()
 
 	def swing(self):
@@ -95,8 +125,7 @@ class TelloDance():
 			print('before move')
 
 			self.drone.go_xyz_speed(int(next_pos[0]), int(next_pos[1]), int(next_pos[2])+PADDING, speed)
-			print("move " , int(next_pos[0]), int(next_pos[1]), int(next_pos[2])+PADDING, speed)
-			print('move done')
+
 	#         time.sleep(TEMPO)
 
 	def draw_spirale(self):
