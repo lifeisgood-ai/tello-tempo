@@ -45,6 +45,18 @@ class TelloDance():
 
 		self.stop()
 
+	def patrol(self):
+		"""
+        Dessine un arc de cercle et se retourne
+        Espae nécessaire environ 1.5m
+        """
+		self.drone.curve_xyz_speed(25, -25, 0, 150, 25, 0, 50)
+		time.sleep(1)
+		self.drone.stop()
+		self.drone.curve_xyz_speed(-25, 25, 0, -150, -25, 0, 50)
+		time.sleep(1)
+		self.stop()
+
 	def stop(self):
 		self.drone.send_rc_control(0, 0, 0, 0)
 		time.sleep(.1)
