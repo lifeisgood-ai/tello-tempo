@@ -12,6 +12,7 @@ At launch the TelloSound module loads all audio files and extracts beats. It tak
 
 
 To run swing movement, show 3 fingers to drone front camera or press c
+
 To stop demo show 4 fingers or press v
 
 To play/stop music show finger 1 or 2, or press b or n
