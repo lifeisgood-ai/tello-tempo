@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# import configargparse
+import argparse
 import os, sys, time
 
 import platform
@@ -39,13 +39,9 @@ def catch_interrupting():
 
 def main(status):
     tello_handler = TelloHandler(status)
-    #b=0
-    # tello_sound = TelloSound(b)
-    # tello_sound.load_libro()
-    # tello_sound.go()
 
-    #sys.exit(0)
-    tello_handler.init_drone()
+    # tello_handler.init_drone()
+
     try:
         tello_handler.capture()
         tello_handler.stop_drone()
@@ -66,6 +62,7 @@ class TelloHandler(object):
         self.keydown = False
         self.speed = 50
 
+        # Create the drone
         self.drone = djitellopy.Tello()
         self.init_drone()
         self.init_controls()
@@ -74,9 +71,6 @@ class TelloHandler(object):
         self.img_height = 480*2
 
         self.track_cmd = ""
-        # self.tracker = Tracker(self.vid_stream.height,
-        #                       self.vid_stream.width,
-        #                       green_lower, green_upper)
         self.INTERRUPT = False
         self.TIMEOUT_FINGERS = 0.5  # seconds before validating a count of fingers
         self.MOVE_DISTANCE  = 50
@@ -87,14 +81,13 @@ class TelloHandler(object):
 
         self.cb = 0
 
+        # Declare modules
         self.tello_bridge = TelloBridge()
         self.tello_sound = TelloSound(self.tello_bridge)
         self.tello_dance = TelloDance(self.drone, self.tello_bridge)
-
         self.hand_detector = HandDetector()
 
-
-        # Event and Thread to handle timeout of finger detection
+        # Event and Thread to handle th_counter timeout of finger detection
         self.evt_restart_timer = Event()
         self.evt_stop_counter = Event()
         self.evt_validate_state = Event()
@@ -103,22 +96,30 @@ class TelloHandler(object):
         self.evt_stop_counter.clear()
         self.evt_validate_state.clear()
 
+        # Declare thread and events
         self.timeout_thread = TelloThread(target=self.th_counter,
                                           args=(self.evt_restart_timer,
                                                 self.evt_validate_state,
                                                 self.evt_stop_counter,))
 
         #self.dance_thread = TelloThread(target=self.tello_dance.swing1  , args=("default1",))
-        self.dance_thread = TelloThread(target=self.tello_dance.swing1)
+        self.dance_thread = TelloThread(target=self.tello_dance.dance_now)
 
         # self.sound_thread = TelloThread(target=self.tello_sound.go_for_music)
         self.sound_thread = self.create_thread(self.tello_sound.go_for_music, "default1")
+
+        self.threads_list = [self.timeout_thread, self.dance_thread, self.sound_thread]
 
     def create_thread(self, func, *args):
         return TelloThread(target=func, args=(args,))
 
     def change_state(self, state):
         """
+        Handles the command to be launched when there is a valid change in state
+
+        0: state defaults to 0, nothing to do
+        other values: change accordingly, no limit in number
+        100: sound volume is handled in handdetector class
 
         Args:
               state: the int value returned by detection of fingers or with keybord call
@@ -147,7 +148,7 @@ class TelloHandler(object):
             elif self.state == 3:
                 # change music/dance
                 self.sound_thread =  self.create_thread(self.tello_sound.go_for_music, "default1")
-                self.dance_thread = self.create_thread(self.tello_dance.swing1)
+                self.dance_thread = self.create_thread(self.tello_dance.dance_now)
                 self.dance_thread.start()
                 self.sound_thread.start()
                 #self.tello_dance.swing()
@@ -228,6 +229,7 @@ class TelloHandler(object):
 
     def check_change(self, state):
         """
+        Resets counter's timer and updates the value of the state to be validated `state_validation`
 
         Args:
             state: int value to check
@@ -240,7 +242,8 @@ class TelloHandler(object):
 
     def th_counter(self, evt_restart_timer, evt_validate_state, evt_stop_counter):
         """
-        Function executer in the thread
+        Timer that sends events on timeout reached and is restarted/stopped on receiving the corresponding event
+
         Args:
             evt_restart_timer:
             evt_validate_state:
@@ -255,7 +258,6 @@ class TelloHandler(object):
                 evt_restart_timer.clear()
                 evt_stop_counter.clear()
                 timeout = time.time() + d
-                #print(f"Checking {self.checking_state}...")
                 while True:
                     if evt_stop_counter.is_set():
                         #print("Timer interrupted")
@@ -278,7 +280,6 @@ class TelloHandler(object):
         Returns:
 
         """
-        # image = cv.resize(my_frame,(width, height))
         image = frame
         image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         image = cv.flip(image, 1)
@@ -305,38 +306,34 @@ class TelloHandler(object):
             cv.destroyAllWindows()
         except Exception as e:
             print(e)
-        self.stop_threads()
+        self.stop_threads_listeners()
         print("Wait for 2 seconds...")
         time.sleep(2)
         print("RIP...")
         catch_interrupting()
 
-    def stop_threads(self):
+    def stop_threads_listeners(self):
         """
-        Stop all thread declared
-
-        TODO: handle a list of threads instead
+        Stop all threads declared and listeners as well
+        To be tested
 
         Returns:
 
         """
-        self.timeout_thread.kill()
-        self.timeout_thread.join()
-        self.tello_thread.kill()
-        self.tello_thread.join()
+        for th in self.threads_list:
+            th.kill()
+            th.join()
 
         self.key_listener.join()
 
     def stall(self):
         """
-        Appears to be useful for keyboard control :-|
+        Appears to be useful ... :-|
         Returns:
-
         """
         self.drone.send_rc_control(0, 0, 0, 0)
 
     def battery_level(self):
-        # print(f"Battery level is {tello.get_battery()}%")
         print(f"Battery level is {self.drone.get_battery()}%")
 
     # Drone configuration handling
@@ -361,12 +358,6 @@ class TelloHandler(object):
             print("Activating stream on drone")
             self.drone.streamon()
 
-            #time.sleep(3)
-            # self.drone.subscribe(self.drone.EVENT_FLIGHT_DATA,
-            #                      self.flight_data_handler)
-            # self.drone.subscribe(self.drone.EVENT_FILE_RECEIVED,
-            #                      self.handle_flight_received)
-
     def stop_drone(self):
         # End of processing
         print("Stopping drone...")
@@ -378,23 +369,18 @@ class TelloHandler(object):
     # Keuborard Handling
     def on_press(self, keyname):
         """handler for keyboard listener"""
-        # 'Key.tab': lambda speed: self.drone.takeoff(),
         if self.keydown:
             return
         try:
             self.keydown = True
             keyname = str(keyname).strip('\'')
-            # print('+' + keyname)
             if keyname == 'Key.esc':
-                # self.drone.quit()
                 exit(0)
             if keyname in self.controls:
                 key_handler = self.controls[keyname]
                 if isinstance(key_handler, str):
-                    # print("press", key_handler)
                     getattr(self.drone, key_handler)(self.speed)
                 else:
-                    # print("press", key_handler)
                     key_handler()
         except AttributeError:
             print('special key {0} pressed'.format(keyname))
@@ -408,15 +394,9 @@ class TelloHandler(object):
         """Reset on key up from keyboard listener"""
         self.keydown = False
         keyname = str(keyname).strip('\'')
-        # print('-' + keyname)
         if keyname in self.controls:
             key_handler = self.controls[keyname]
             print('... released')
-            # if isinstance(key_handler, str):
-            # print("release ", key_handler)
-            #    getattr(self.drone, key_handler)(0)
-            # else:
-            #    key_handler()
 
     def init_controls(self):
         """Define keys and add listener"""
@@ -430,10 +410,10 @@ class TelloHandler(object):
             # # 'Key.shift_r': 'down',
             # 'r': 'counter_clockwise',
             # 'e': 'clockwise',
-            # 'i': lambda: self.drone.flip_forward(),
-            # 'k': lambda: self.drone.flip_back(),
-            # 'j': lambda: self.drone.flip_left(),
-            # 'l': lambda: self.drone.flip_right(),
+            'i': lambda: self.drone.flip_forward(),
+            'k': lambda: self.drone.flip_back(),
+            'j': lambda: self.drone.flip_left(),
+            'l': lambda: self.drone.flip_right(),
             # # arrow keys for fast turns and altitude adjustments
             # 'Key.left': lambda: self.drone.counter_clockwise(),
             # 'Key.right': lambda: self.drone.clockwise(),
@@ -466,12 +446,9 @@ class TelloHandler(object):
 
 
 if __name__ == '__main__':
-    # status == 0 => webcam
-    # status == 1 => drone
-    #th = TelloHandler(1)
-    #th.battery_level()
-    status = 1
-    status = 0
-    # beat()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--camera', type=int, default=1, help="Set to 1 to use drone camera (and drone) or webcam (0)")
+    config = parser.parse_args()
+
+    status = config.camera
     main(status)
-    # hand_detect()

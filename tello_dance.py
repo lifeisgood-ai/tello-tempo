@@ -16,13 +16,19 @@ class TelloDance():
 		self.LITTLE_PAUSE = 0.1 # timeout between rc_control commands
 		self.speed_side = 20
 
-	def up(self, name="default"):
-		#
-		pass
+	def dance_now(self, _):
+		"""
+		Choose a dance to execute, manually for now
 
-	def swing1(self, _):
-		#self.dance_right_left(_)
-		self.dance_swing2(_)
+		# TODO : organize launch with random or pass an arg
+
+		:param _:
+		:return:
+		"""
+
+		self.dance_v_shape(_)
+		# self.swing()
+		# self.dance_right_left(_)
 		# self.patrol()
 		# self.draw_spirale()
 
@@ -37,7 +43,7 @@ class TelloDance():
 
 		self.stop()
 
-	def dance_swing2(self, _):
+	def dance_v_shape(self, _):
 		print("Launch swing on music : ")
 		speed_side = 20
 		speed_up = 40
@@ -62,6 +68,10 @@ class TelloDance():
 		self.stop()
 
 	def swing(self):
+		"""
+		Drone goes right and left and rotates on itself (yaw)
+		:return:
+		"""
 		print("Launch swing")
 		for i in range(4):
 			self.drone.send_rc_control(-20, 0, 0, 100) # left
@@ -86,6 +96,34 @@ class TelloDance():
 		self.drone.curve_xyz_speed(-25, 25, 0, -150, -25, 0, 50)
 		time.sleep(1)
 		self.stop()
+
+	def draw_spirale(self):
+		"""
+		Execute un mouvement en spirale en suivant les coordonnées générées
+
+		At work !
+
+		:return:
+		"""
+		spiral = []
+		rayon = 100
+		for t in np.arange(0, 2 * np.pi, 0.1):
+			# add (theta, x, y)
+			spiral.append((t, rayon * np.sin(t), rayon * np.cos(t), 0))
+
+		previous_pos = [spiral[0][1], spiral[0][2], spiral[0][3]]
+
+		for item in spiral:
+			t, x, y, z = item
+			pos = [x, y, z]
+
+			# next_pos = self.difference(previous_pos, pos)
+			# x, y, z = next_pos
+
+			print(t, x, y, z)
+			print(t, int(x), int(y), int(z))
+			self.drone.go_xyz_speed(int(x), int(y), int(z), 50)
+
 
 	def stop(self):
 		self.drone.send_rc_control(0, 0, 0, 0)
@@ -126,27 +164,6 @@ class TelloDance():
 
 			self.drone.go_xyz_speed(int(next_pos[0]), int(next_pos[1]), int(next_pos[2])+PADDING, speed)
 
-	#         time.sleep(TEMPO)
-
-	def draw_spirale(self):
-		spiral = []
-		rayon=100
-		for t in np.arange(0, 2*np.pi, 0.1):
-			# add (theta, x, y)
-			spiral.append( (t, rayon * np.sin(t), rayon * np.cos(t), 0) )
-
-		previous_pos = [spiral[0][1], spiral[0][2], spiral[0][3]]
-
-		for item in spiral	:
-			t, x, y, z = item
-			pos= [x, y ,z]
-
-			#next_pos = self.difference(previous_pos, pos)
-			#x, y, z = next_pos
-
-			print(t, x, y, z)
-			print(t, int(x), int(y) , int(z))
-			self.drone.go_xyz_speed(int(x), int(y) , int(z), 50)
 
 
 if __name__ == '__main__':
@@ -154,16 +171,16 @@ if __name__ == '__main__':
 	td.draw_spirale()
 
 	#td.stop()
-# from pydub.playback import play
-# from pydub import AudioSegment
+	# from pydub.playback import play
+	# from pydub import AudioSegment
 
-# TONE=librosa.tone(440, duration=1)
-# import numpy as np
-# from scipy.io.wavfile import write
-# noise = np.random.uniform(-1,1,100000)
-# write('noise.wav', len(noise), noise)
+	# TONE=librosa.tone(440, duration=1)
+	# import numpy as np
+	# from scipy.io.wavfile import write
+	# noise = np.random.uniform(-1,1,100000)
+	# write('noise.wav', len(noise), noise)
 
-# def beat():
-#     sound = AudioSegment.from_wav('noise.wav')
-#     play(sound)
-#     # play('noise')
+	# def beat():
+	#     sound = AudioSegment.from_wav('noise.wav')
+	#     play(sound)
+	#     # play('noise')
